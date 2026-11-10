@@ -1,0 +1,29 @@
+# Java / Spring Boot
+backend/target/
+backend/build/
+backend/.gradle/
+backend/.idea/
+backend/.classpath
+backend/.project
+backend/.settings/
+
+# Node / Angular
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.cache/
+frontend/.idea/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Docker / local env
+.env
+.env.*
+*.log
+
+# Git
+*.orig
