@@ -3,6 +3,8 @@
 ## Realm
 
 - nome: `almoxarifado`
+- PostgreSQL exposto em `localhost:6432` no ambiente local
+- Keycloak exposto em `http://localhost:8181`
 
 ## Usuários de desenvolvimento
 

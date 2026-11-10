@@ -89,7 +89,8 @@ npm start
 ## URLs locais
 
 - Backend: http://localhost:8080
-- Keycloak: http://localhost:8081
+- Keycloak: http://localhost:8181
+- PostgreSQL: localhost:6432
 - Swagger/OpenAPI: http://localhost:8080/swagger-ui/index.html
 - Frontend: http://localhost:4200
 
