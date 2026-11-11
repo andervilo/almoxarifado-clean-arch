@@ -1,9 +1,11 @@
 package com.almoxarifado.backend.estoque.domain;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,10 +66,18 @@ public class ItemEstoque {
             if (lote.isVencido()) {
                 throw new IllegalStateException("Lote vencido não pode ser utilizado em saída");
             }
+            lote.debitar(quantidade);
+            saldo = saldo.subtract(quantidade);
+            historicoMovimentacoes.add(new MovimentacaoEstoque(TipoMovimento.SAIDA, quantidade, codigoLote, LocalDateTime.now()));
+            return;
+        }
+
+        if (!lotes.isEmpty()) {
+            debitarLotesParaSaida(quantidade);
         }
 
         saldo = saldo.subtract(quantidade);
-        historicoMovimentacoes.add(new MovimentacaoEstoque(TipoMovimento.SAIDA, quantidade, codigoLote, LocalDateTime.now()));
+        historicoMovimentacoes.add(new MovimentacaoEstoque(TipoMovimento.SAIDA, quantidade, null, LocalDateTime.now()));
     }
 
     public void adicionarLote(LoteEstoque lote) {
@@ -79,6 +89,10 @@ public class ItemEstoque {
 
     public BigDecimal getSaldo() {
         return saldo;
+    }
+
+    public Map<String, LoteEstoque> getLotes() {
+        return Collections.unmodifiableMap(lotes);
     }
 
     public List<MovimentacaoEstoque> getHistoricoMovimentacoes() {
@@ -100,6 +114,38 @@ public class ItemEstoque {
     private void validarQuantidade(BigDecimal quantidade, String tipo) {
         if (quantidade == null || quantidade.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Quantidade de " + tipo + " deve ser maior que zero");
+        }
+    }
+
+    private void debitarLotesParaSaida(BigDecimal quantidadeSolicitada) {
+        List<LoteEstoque> lotesDisponiveis = lotes.values().stream()
+            .filter(lote -> !lote.isVencido() && lote.getQuantidade().compareTo(BigDecimal.ZERO) > 0)
+            .sorted(Comparator.comparing(
+                (LoteEstoque lote) -> lote.getValidade() == null ? LocalDate.MAX : lote.getValidade(),
+                Comparator.nullsLast(Comparator.naturalOrder())
+            ))
+            .toList();
+
+        if (lotesDisponiveis.isEmpty()) {
+            throw new IllegalStateException("Não há lote disponível para a saída solicitada");
+        }
+
+        BigDecimal totalDisponivel = lotesDisponiveis.stream()
+            .map(LoteEstoque::getQuantidade)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (totalDisponivel.compareTo(quantidadeSolicitada) < 0) {
+            throw new IllegalStateException("saldo insuficiente para a saída solicitada");
+        }
+
+        BigDecimal restante = quantidadeSolicitada;
+        for (LoteEstoque lote : lotesDisponiveis) {
+            if (restante.compareTo(BigDecimal.ZERO) <= 0) {
+                break;
+            }
+            BigDecimal quantidadeDoLote = lote.getQuantidade().min(restante);
+            lote.debitar(quantidadeDoLote);
+            restante = restante.subtract(quantidadeDoLote);
         }
     }
 }

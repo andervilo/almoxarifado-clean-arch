@@ -7,7 +7,7 @@ import java.util.Objects;
 public class LoteEstoque {
     private final String codigo;
     private final LocalDate validade;
-    private final BigDecimal quantidade;
+    private BigDecimal quantidade;
 
     public LoteEstoque(String codigo, LocalDate validade, BigDecimal quantidade) {
         if (codigo == null || codigo.isBlank()) {
@@ -32,6 +32,16 @@ public class LoteEstoque {
 
     public BigDecimal getQuantidade() {
         return quantidade;
+    }
+
+    public void debitar(BigDecimal quantidadeSolicitada) {
+        if (quantidadeSolicitada == null || quantidadeSolicitada.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Quantidade da saída do lote deve ser maior que zero");
+        }
+        if (quantidade.compareTo(quantidadeSolicitada) < 0) {
+            throw new IllegalStateException("Quantidade insuficiente no lote para a saída solicitada");
+        }
+        quantidade = quantidade.subtract(quantidadeSolicitada);
     }
 
     public boolean isVencido() {

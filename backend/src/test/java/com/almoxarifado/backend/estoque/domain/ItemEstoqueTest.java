@@ -50,4 +50,27 @@ class ItemEstoqueTest {
         assertEquals(TipoMovimento.ENTRADA, item.getHistoricoMovimentacoes().getFirst().getTipo());
         assertEquals(TipoMovimento.SAIDA, item.getHistoricoMovimentacoes().get(1).getTipo());
     }
+
+    @Test
+    void deveUsarLoteComValidadeMaisProximaNaSaidaPadrao() {
+        ItemEstoque item = new ItemEstoque("MAT-005", "Adesivo", true, new BigDecimal("20.00"));
+        item.adicionarLote(new LoteEstoque("LOTE-10", LocalDate.now().plusDays(30), new BigDecimal("10.00")));
+        item.adicionarLote(new LoteEstoque("LOTE-11", LocalDate.now().plusDays(5), new BigDecimal("10.00")));
+
+        item.registrarSaida(new BigDecimal("6.00"));
+
+        assertEquals(new BigDecimal("4.00"), item.getLotes().get("LOTE-11").getQuantidade());
+    }
+
+    @Test
+    void deveUsarFilaFifoQuandoItemNaoTemValidade() {
+        ItemEstoque item = new ItemEstoque("MAT-006", "Parafuso", true, new BigDecimal("20.00"));
+        item.adicionarLote(new LoteEstoque("LOTE-20", null, new BigDecimal("10.00")));
+        item.adicionarLote(new LoteEstoque("LOTE-21", null, new BigDecimal("10.00")));
+
+        item.registrarSaida(new BigDecimal("15.00"));
+
+        assertEquals(new BigDecimal("0.00"), item.getLotes().get("LOTE-20").getQuantidade());
+        assertEquals(new BigDecimal("5.00"), item.getLotes().get("LOTE-21").getQuantidade());
+    }
 }
