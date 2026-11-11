@@ -6,6 +6,36 @@ Este plano define a sequência técnica de implementação do sistema, priorizan
 
 A ideia é implementar primeiro o núcleo de negócio (estoque), depois expandir para requisições, inventário, alertas e interface.
 
+## Status atual do projeto (atualizado em 2026-11-11)
+
+### Concluído
+- estrutura inicial do monorepo com backend e frontend;
+- backend em Java 21 com Spring Boot e Maven configurado;
+- ambiente local com Docker Compose para PostgreSQL e Keycloak;
+- projeto do backend compilando e testando em ambiente local;
+- autenticação via Keycloak configurada e realm `almoxarifado` provisionado;
+- módulo de estoque com domínio implementado e validado:
+  - saldo e validação de saída;
+  - bloqueio de item inativo;
+  - bloqueio de lote vencido;
+  - histórico de movimentações;
+  - regra FEFO/FIFO para seleção de lote em saídas;
+- migração inicial do schema do estoque com Flyway;
+- entidades JPA para persistência do estoque criadas.
+
+### Em andamento
+- finalização dos módulos de organização e usuários;
+- cadastro de itens, almoxarifados e locais físicos;
+- integração do backend com autenticação e autorização em nível de casos de uso;
+- implementação do fluxo de requisições e inventário;
+- desenvolvimento do frontend Angular com telas do MVP.
+
+### Próximo foco
+- concluir o módulo de organização e permissões;
+- consolidar catálogo e estrutura física;
+- avançar para requisições e inventário em sequência;
+- depois disso, finalizar dashboard, alertas e frontend.
+
 ---
 
 ## Objetivo do MVP
@@ -24,6 +54,9 @@ Entregar uma solução funcional para:
 ## Ordem de implementação
 
 ## 1. Base do projeto e infraestrutura
+
+### Status
+✅ Concluído
 
 ### Tarefas
 - criar estrutura do projeto backend com Spring Boot
@@ -51,6 +84,9 @@ Entregar uma solução funcional para:
 ---
 
 ## 2. Autenticação e autorização
+
+### Status
+🟡 Em andamento
 
 ### Tarefas
 - configurar Spring Security
@@ -131,6 +167,9 @@ Entregar uma solução funcional para:
 
 ## 5. Módulo de estoque (núcleo do sistema)
 
+### Status
+✅ Concluído no núcleo de domínio e persistência inicial
+
 ### Tarefas
 - criar `MovimentacaoEstoque`
 - criar `LinhaMovimentacao`
@@ -162,6 +201,14 @@ Entregar uma solução funcional para:
 - saída de item vencido é bloqueada
 - transferência é atômica
 - operação crítica não deixa saldo inconsistente
+
+### Implementação atual validada
+- `ItemEstoque` com regras de entrada, saída, saldo e item inativo;
+- `LoteEstoque` com validade e bloqueio de itens vencidos;
+- `MovimentacaoEstoque` e `TipoMovimento` para auditoria do histórico;
+- regra de saída por lote seguindo FEFO/FIFO;
+- entidades JPA e schema Flyway para persistência do módulo;
+- testes automatizados do domínio executando com sucesso.
 
 ---
 
@@ -327,17 +374,17 @@ Entregar uma solução funcional para:
 
 ## Sequência recomendada de execução
 
-1. infraestrutura + docker + db + flyway
-2. Keycloak + autenticação
-3. organização e usuários
-4. catálogo + estrutura física
-5. estoque + regras de negócio
-6. requisições
-7. inventário
-8. alertas
-9. frontend Angular
-10. testes finais
-11. documentação e validação
+1. ✅ infraestrutura + docker + db + flyway
+2. ✅ Keycloak + autenticação
+3. 🔄 organização e usuários
+4. 🔄 catálogo + estrutura física
+5. ✅ estoque + regras de negócio (núcleo validado)
+6. ⏳ requisições
+7. ⏳ inventário
+8. ⏳ alertas
+9. ⏳ frontend Angular
+10. ⏳ testes finais
+11. ⏳ documentação e validação
 
 ---
 
@@ -350,9 +397,11 @@ Entregar uma solução funcional para:
 - Keycloak autenticando
 
 ### Marco 2 — Núcleo de estoque pronto
-- cadastro de itens e entradas/saídas operando
-- saldo consistente
-- lote e validade funcionando
+- ✅ cadastro de itens e entradas/saídas operando no domínio
+- ✅ saldo consistente
+- ✅ lote e validade funcionando
+- ✅ histórico de movimentações preservado
+- ✅ regra FEFO/FIFO validada em testes
 
 ### Marco 3 — Sistema operacional MVP
 - requisições e inventário ativos
