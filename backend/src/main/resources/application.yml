@@ -1,40 +1,70 @@
 spring:
   application:
-    name: backend
+    name: almoxarifado
+  profiles:
+    default: local
   datasource:
-    url: jdbc:postgresql://localhost:6432/almoxarifado
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
   flyway:
+    # A execução real ocorre por módulo em FlywayModulosConfig (schema + histórico próprios).
     enabled: true
-    baseline-on-migrate: true
+    baseline-on-migrate: false
+  modulith:
+    events:
+      jdbc:
+        schema: modulith
+        schema-initialization:
+          enabled: false            # tabela criada via Flyway (db/migration/modulith)
+      republish-outstanding-events-on-restart: true
+      completion-mode: update       # mantém histórico das publicações para auditoria
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8181/realms/almoxarifado
-          jwk-set-uri: http://localhost:8181/realms/almoxarifado/protocol/openid-connect/certs
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/almoxarifado}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8181/realms/almoxarifado/protocol/openid-connect/certs}
+          audiences: almoxarifado-backend
 
 server:
   port: 8080
+  error:
+    include-stacktrace: never
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+  api-docs:
+    path: /v3/api-docs
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,modulith
   endpoint:
     health:
       show-details: when_authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+
+almoxarifado:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
 
 logging:
   level:
     org.springframework.security: INFO
-    org.springframework.web: INFO
+    org.springframework.modulith: INFO

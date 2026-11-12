@@ -1,0 +1,12 @@
+# Execução dentro do Docker Compose.
+# O issuer continua sendo a URL pública (localhost:8181), que é a que o navegador usa
+# e vai no claim "iss" do token; as chaves públicas (JWKS) são buscadas pela rede interna.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://postgres:5432/almoxarifado}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8181/realms/almoxarifado}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://keycloak:8080/realms/almoxarifado/protocol/openid-connect/certs}

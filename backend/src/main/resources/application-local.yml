@@ -1,0 +1,9 @@
+# Desenvolvimento local: backend rodando na máquina (IDE / mvn spring-boot:run),
+# PostgreSQL e Keycloak no Docker Compose.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:6432/almoxarifado}
+
+logging:
+  level:
+    com.almoxarifado: DEBUG
