@@ -14,6 +14,7 @@ public class ProcessarRealocacao {
  @Transactional(propagation=Propagation.REQUIRES_NEW)
  public void executar(RealocacaoReservaSolicitada e) {
   repository.bloquear(e.organizacaoId(),e.eventId());if(repository.processado(e.organizacaoId(),e.eventId())) return;
+  repository.bloquearLocal(e.organizacaoId(),e.localId());
   repository.bloquear(e.organizacaoId(),e.itemId());var posicoes=repository.posicoes(e.organizacaoId(),e.itemId());
   var reservas=repository.reservas(e.organizacaoId(),e.requisicaoId(),e.itemId());
   var total=reservas.stream().map(EstoqueRepository.Reserva::quantidade).reduce(BigDecimal.ZERO,BigDecimal::add);

@@ -25,6 +25,9 @@ public interface EstoqueRepository {
  java.time.Instant registrarEntrega(UUID org,UUID operacao,UUID requisicao,UUID item,java.math.BigDecimal quantidade,java.math.BigDecimal custoTotal);
  record ConsumoVinculado(UUID requisicaoId,UUID itemId,java.math.BigDecimal quantidade,java.math.BigDecimal custoTotal) {}
  Optional<ConsumoVinculado> consumoDaOperacao(UUID org,UUID operacao);
+ void bloquearLocal(UUID org,UUID local);
+ record PosicaoLocal(UUID posicaoId,UUID itemId) {}
+ List<PosicaoLocal> posicoesDoLocal(UUID org,UUID local);
  BigDecimal custo(UUID org,UUID item,UUID almoxarifado);
  BigDecimal ajustarCusto(UUID org,UUID item,UUID almoxarifado,BigDecimal delta,BigDecimal valorEntrada);
  void marcarEstorno(UUID org,UUID original,UUID estorno);

@@ -11,6 +11,10 @@ public class EstoqueJdbc implements EstoqueRepository {
  private final JdbcTemplate jdbc;
  public EstoqueJdbc(JdbcTemplate jdbc) { this.jdbc=jdbc; }
  public void bloquear(UUID org,UUID chave) { jdbc.queryForObject("SELECT pg_advisory_xact_lock(hashtextextended(?,0))",Object.class,org+":"+chave); }
+ public void bloquearLocal(UUID org,UUID local) { jdbc.queryForObject("SELECT pg_advisory_xact_lock(hashtextextended(?,0))",Object.class,"local:"+org+":"+local); }
+ public List<PosicaoLocal> posicoesDoLocal(UUID org,UUID local) {
+  return jdbc.query("SELECT id,item_id FROM estoque.posicoes WHERE organizacao_id=? AND local_id=? ORDER BY id",(rs,n)->new PosicaoLocal(rs.getObject("id",UUID.class),rs.getObject("item_id",UUID.class)),org,local);
+ }
  public ItemOperacional validarItem(UUID org,UUID item) {
   return jdbc.query("""
    SELECT i.* FROM estoque.itens_projecao i JOIN estoque.organizacoes_projecao o ON o.id=i.organizacao_id

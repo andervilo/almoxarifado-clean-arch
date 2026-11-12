@@ -31,9 +31,20 @@ public class MotorEstoque {
             if(!existente.get().equals(comando.toString())) throw erro("IDEMPOTENCIA_CONFLITO","Chave ja utilizada com outros dados");
             return operacao;
         }
-        repository.bloquear(org,comando.itemId());
         var tipo=comando.tipo();
         if(!Set.of("ENTRADA","SAIDA","TRANSFERENCIA","AJUSTE","ESTORNO","RESERVA","LIBERACAO","ENTREGA").contains(tipo)) throw new IllegalArgumentException("Tipo invalido");
+        var locais=new TreeSet<UUID>();
+        if(Set.of("ENTRADA","AJUSTE","TRANSFERENCIA").contains(tipo) && comando.destinoId()!=null) locais.add(comando.destinoId());
+        if(Set.of("SAIDA","TRANSFERENCIA","RESERVA","LIBERACAO","ENTREGA").contains(tipo) && comando.origemId()!=null) locais.add(comando.origemId());
+        if(tipo.equals("ESTORNO")) {
+            if(comando.referenciaId()==null) throw new IllegalArgumentException("Referencia obrigatoria");
+            var originais=repository.linhas(org,comando.referenciaId());
+            if(originais.isEmpty()) throw new RecursoNaoEncontradoException("Movimento original ainda nao confirmado ou sem alteracao de saldo");
+            var ids=originais.stream().map(EstoqueRepository.Linha::posicaoId).collect(java.util.stream.Collectors.toSet());
+            repository.posicoes(org,comando.itemId()).stream().filter(p->ids.contains(p.id())).map(PosicaoEstoque::localId).forEach(locais::add);
+        }
+        locais.forEach(local->repository.bloquearLocal(org,local));
+        repository.bloquear(org,comando.itemId());
         var item=tipo.equals("LIBERACAO")?null:repository.validarItem(org,comando.itemId());
         var posicoes=new ArrayList<>(repository.posicoes(org,comando.itemId()));
         var linhas=new ArrayList<EstoqueRepository.Linha>();
@@ -169,6 +180,8 @@ public class MotorEstoque {
         if(!lote.isEmpty() && posicoes.stream().anyMatch(v->v.lote().equals(lote) && !Objects.equals(v.validade(),validade)))
             throw erro("VALIDADE_DIVERGENTE","Lote do item ja cadastrado com outra validade");
         var almox=repository.validarLocal(org,local);
+        if(!serie.isEmpty() && posicoes.stream().map(v->alteradas.getOrDefault(v.id(),v)).anyMatch(v->!v.localId().equals(local) && v.serie().equals(serie) && v.quantidade().signum()>0))
+            throw erro("SERIE_DUPLICADA","Numero de serie ja em outro local");
         var p=posicoes.stream().filter(v->v.localId().equals(local) && v.lote().equals(lote) && v.serie().equals(serie)).findFirst().orElse(null);
         if(p!=null) p=alteradas.getOrDefault(p.id(),p);
         if(p==null) p=new PosicaoEstoque(UUID.randomUUID(),org,c.itemId(),local,lote,serie,validade,recebido,BigDecimal.ZERO,BigDecimal.ZERO,BigDecimal.ZERO);

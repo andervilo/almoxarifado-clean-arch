@@ -27,10 +27,15 @@ public class InventarioService {
  }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
  public InventarioRepository.Inventario criar(UUID local) {
+  return criar(local,false);
+ }
+ @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
+ public InventarioRepository.Inventario criar(UUID local,boolean contagemCega) {
   exigirLocal(local);
+  if(repository.almoxarifadoDoLocal(contexto.organizacaoId(),local)==null) throw new RecursoNaoEncontradoException("Local nao cadastrado nesta organizacao ou ainda nao sincronizado");
   var org=contexto.organizacaoId();var snapshot=repository.snapshot(org,local);
-  if(snapshot.isEmpty()) throw new RegraNegocioException("SALDO_NAO_SINCRONIZADO","Local sem posicoes de estoque sincronizadas");
-  var id=UUID.randomUUID();repository.criar(org,id,local,snapshot);auditoria.registrar(org,contexto.usuarioId(),"INVENTARIO_CRIADO",id.toString());return buscar(id);
+  if(snapshot.size()>1000) throw new RegraNegocioException("LIMITE_INVENTARIO","Local excede 1000 posicoes por inventario");
+  var id=UUID.randomUUID();repository.criar(org,id,local,snapshot,contagemCega);auditoria.registrar(org,contexto.usuarioId(),"INVENTARIO_CRIADO",id.toString());return buscar(id);
  }
  private void exigirContagem(InventarioRepository.Inventario inv) { if(!inv.status().equals("CONTAGEM")) throw new RegraNegocioException("ESTADO_INVALIDO","Inventario nao esta em contagem"); }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
@@ -40,13 +45,21 @@ public class InventarioService {
   repository.contar(contexto.organizacaoId(),id,c.contar(quantidade));auditoria.registrar(contexto.organizacaoId(),contexto.usuarioId(),"INVENTARIO_CONTADO",id+":"+posicao);
  }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
+ public UUID adicionar(UUID id,UUID item,String lote,String serie,java.time.LocalDate validade,BigDecimal quantidade,BigDecimal custo) {
+  var inv=buscar(id,true);exigirContagem(inv);
+  if(inv.contagens().size()>=1000) throw new RegraNegocioException("LIMITE_INVENTARIO","Limite de 1000 posicoes atingido");
+  if(item==null || quantidade==null || quantidade.signum()<=0 || quantidade.scale()>4 || custo==null || custo.signum()<0 || custo.scale()>6) throw new IllegalArgumentException("Item, quantidade e custo invalidos");
+  UUID posicao=UUID.randomUUID();var contagem=new com.almoxarifado.inventario.domain.Contagem(posicao,item,inv.localId(),lote==null?"":lote,serie==null?"":serie,validade,BigDecimal.ZERO,quantidade,custo,0);
+  repository.adicionarContagem(contexto.organizacaoId(),id,contagem);auditoria.registrar(contexto.organizacaoId(),contexto.usuarioId(),"INVENTARIO_NOVA_POSICAO",id+":"+posicao);return posicao;
+ }
+ @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
  public void finalizar(UUID id,String justificativa) {
   if(justificativa==null || justificativa.isBlank()) throw new IllegalArgumentException("Justificativa obrigatoria");
   var inv=buscar(id,true);exigirContagem(inv);
   if(inv.contagens().stream().anyMatch(c->c.contada()==null)) throw new RegraNegocioException("CONTAGEM_INCOMPLETA","Todas as posicoes precisam ser contadas");
   var comando=UUID.randomUUID();var org=contexto.organizacaoId();repository.estado(org,id,"FINALIZANDO",comando,null);
-  eventos.publicar(new AjusteInventarioSolicitado(comando,Instant.now(),org,1,id,inv.localId(),contexto.usuarioId(),justificativa,inv.contagens().stream()
-   .map(c->new AjusteInventarioSolicitado.Linha(c.posicaoId(),c.itemId(),c.revisao(),c.sistema(),c.contada(),c.lote(),c.serie(),c.validade(),c.custo())).toList()));
+  eventos.publicar(new AjusteInventarioSolicitado(comando,Instant.now(),org,2,id,inv.localId(),contexto.usuarioId(),justificativa,inv.contagens().stream()
+   .map(c->new AjusteInventarioSolicitado.Linha(c.posicaoId(),c.itemId(),c.revisao(),c.sistema(),c.contada(),c.lote(),c.serie(),c.validade(),c.custo())).toList(),true));
   auditoria.registrar(org,contexto.usuarioId(),"INVENTARIO_FINALIZANDO",id.toString());
  }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
