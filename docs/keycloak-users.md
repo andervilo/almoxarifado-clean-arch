@@ -49,5 +49,6 @@ em `http://localhost:8181`, com `admin / admin` por padrão no ambiente local.
 
 A importação não atualiza realms existentes. Se o banco `keycloak` já contiver o
 realm, ajuste clients, mappers e usuários pelo console/API administrativa,
-preservando os dados. A organização do token ainda não corresponde a um cadastro
-persistido no módulo `organizacao`, cuja implementação é a próxima etapa.
+preservando os dados. O administrador da plataforma deve cadastrar a organização
+do token por `POST /api/v1/organizacoes`. O script `scripts/validar-backend.ps1`
+faz esse cadastro inicial para a organização de demonstração, se necessário.

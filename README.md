@@ -159,8 +159,8 @@ entre Windows e Docker Linux; o issuer do token continua sendo `localhost`.
 
 As credenciais e a organização de demonstração estão em
 [docs/keycloak-users.md](docs/keycloak-users.md). O endpoint de sessão confirma os
-claims; o isolamento de dados de negócio ainda será implementado nos repositórios
-e casos de uso de cada módulo.
+claims. Os novos repositórios e casos de uso aplicam isolamento por organização;
+os workflows e seus limites estão descritos em `docs/BACKEND_MVP.md`.
 
 ---
 
@@ -200,12 +200,19 @@ PLANO_EXECUCAO.md
 
 ---
 
-## Próxima etapa
+## Backend operacional
 
-- Implementar persistência, casos de uso e endpoints de organização com isolamento por tenant.
-- Implementar catálogo e estrutura física.
-- Integrar o domínio de estoque à persistência e aos endpoints transacionais.
-- Evoluir para requisições, inventário, alertas e autenticação da interface Angular.
+Os módulos de organização, catálogo, estrutura, estoque, requisição, inventário e
+alertas têm persistência, casos de uso e endpoints. O estoque inclui saldo por
+local/lote/série, custo médio, reserva, transferência e estorno. Os workflows entre
+módulos usam eventos do Modulith.
+
+Consulte [docs/BACKEND_MVP.md](docs/BACKEND_MVP.md) para rotas, regras, estados,
+testes e recursos da especificação ainda pendentes. Execute o fluxo com JWT real:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/validar-backend.ps1
+```
 
 ---
 

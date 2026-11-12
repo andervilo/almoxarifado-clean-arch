@@ -3,6 +3,11 @@
 > Especificação técnica: descreve **como** o sistema será construído para atender ao [intent.md](./intent.md).
 > Status: rascunho v1 · Última atualização: 2026-11-09
 
+> Implementação operacional em 2026-11-12: consulte [BACKEND_MVP.md](BACKEND_MVP.md)
+> para rotas executáveis, workflows, validação e limites. Esta especificação inclui
+> recursos adicionais ainda não entregues; o backend atual não representa toda a
+> especificação concluída.
+
 ---
 
 ## 1. Visão geral da arquitetura

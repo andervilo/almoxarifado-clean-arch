@@ -19,7 +19,7 @@ A ideia é implementar primeiro o núcleo de negócio (estoque), depois expandir
 - schemas e históricos Flyway independentes por módulo, sem baseline automático;
 - fronteiras verificadas por ArchUnit e Spring Modulith;
 - testes com PostgreSQL real para migrações e publicação de eventos após commit/rollback;
-- validação da fundação: `mvn clean verify` com 40 testes passando, build Angular
+- validação do backend: `mvn clean verify` com 63 testes passando, build Angular
   compilado e Compose com app/PostgreSQL/Keycloak saudáveis;
 - teste HTTP com tokens reais dos cinco perfis, claim de organização, RBAC do
   Actuator e rejeição de token inválido ou sem audience da API;
@@ -30,21 +30,29 @@ A ideia é implementar primeiro o núcleo de negócio (estoque), depois expandir
   - histórico de movimentações;
   - regra FEFO/FIFO para seleção de lote em saídas;
 - migração inicial do schema do estoque com Flyway;
-- entidades JPA para persistência do estoque criadas.
+- entidades JPA do protótipo preservadas; persistência operacional por adaptadores JDBC;
+- organização, setores, usuários e configuração de alertas com isolamento por tenant;
+- catálogo separado de saldo, categorias, unidades, fornecedores e estrutura física;
+- entrada, saída, transferência atômica, ajuste, estorno, reserva e custo médio;
+- série única por item/tenant, kardex e proteção de histórico por triggers;
+- requisição com rascunho editável, reserva integral, separação, entrega e confirmação;
+- inventário com revisão de saldo e rejeição de ajuste sobre contagem desatualizada;
+- alertas de mínimo/validade, dispensa por revisão e dashboard;
+- teste real via Keycloak e Compose, do cadastro ao inventário e alerta.
 
 ### Pendente
-- persistência, casos de uso e endpoints de organização e usuários;
-- isolamento por `organizacao_id` nas operações de negócio;
-- catálogo e estrutura física;
-- casos de uso transacionais e endpoints do estoque;
-- requisições, inventário e alertas;
-- autenticação e telas do frontend Angular (atualmente o projeto padrão do CLI).
+- autenticação e telas do frontend Angular (atualmente o projeto padrão do CLI);
+- limites/permissões por almoxarifado, atendimento parcial e troca manual de reserva;
+- vínculo operacional do pedido a setor/centro de custo e relatórios correspondentes;
+- inventário cego e de materiais sem posição prévia;
+- provisionamento administrativo no Keycloak e backfill de novas projeções.
+
+Contratos e limites atuais: [BACKEND_MVP.md](BACKEND_MVP.md).
 
 ### Próximo foco
-- concluir o módulo de organização e permissões;
-- consolidar catálogo e estrutura física;
-- avançar para requisições e inventário em sequência;
-- depois disso, finalizar dashboard, alertas e frontend.
+- integrar a interface Angular aos workflows e ao OIDC do Keycloak;
+- evoluir os recursos adicionais listados acima conforme prioridade do produto;
+- validar a experiência operacional com usuários antes de ampliar relatórios.
 
 ---
 
@@ -178,7 +186,9 @@ Entregar uma solução funcional para:
 ## 5. Módulo de estoque (núcleo do sistema)
 
 ### Status
-Parcial: protótipo do domínio e mapeamentos JPA. Ainda sem casos de uso ou endpoints.
+MVP operacional: casos de uso e endpoints transacionais, com testes de concorrência,
+transferência, rastreabilidade, custo médio, reserva, ajuste, estorno e auditoria.
+Os recursos adicionais e seus limites estão detalhados em `BACKEND_MVP.md`.
 
 ### Tarefas
 - criar `MovimentacaoEstoque`
@@ -386,12 +396,12 @@ Parcial: protótipo do domínio e mapeamentos JPA. Ainda sem casos de uso ou end
 
 1. ✅ infraestrutura + docker + db + flyway
 2. 🔄 Keycloak + autenticação (backend configurado; fluxo OIDC da SPA pendente)
-3. 🔄 organização e usuários
-4. 🔄 catálogo + estrutura física
-5. 🔄 estoque + regras de negócio (protótipo do domínio testado; persistência operacional pendente)
-6. ⏳ requisições
-7. ⏳ inventário
-8. ⏳ alertas
+3. ✅ organização e usuários (cadastro local; contas e roles administradas no Keycloak)
+4. ✅ catálogo + estrutura física (cadastros do MVP)
+5. ✅ estoque + regras de negócio (núcleo operacional; evoluções em BACKEND_MVP.md)
+6. ✅ requisições com reserva e entrega integral
+7. ✅ inventário de posições existentes com revisão de saldo
+8. ✅ alertas e dashboard do backend
 9. ⏳ frontend Angular
 10. ⏳ testes finais
 11. ⏳ documentação e validação
@@ -406,11 +416,11 @@ Parcial: protótipo do domínio e mapeamentos JPA. Ainda sem casos de uso ou end
 - Flyway ativo
 - Keycloak autenticando
 
-### Marco 2 — Núcleo de estoque (pendente)
-- Protótipo de entrada, saída, lote, validade e FEFO/FIFO com testes unitários.
-- Faltam catálogo separado do saldo, almoxarifado/local, reservas, transferências,
-  estornos, custo médio, número de série, isolamento por organização e auditoria operacional.
-- A integridade transacional ainda precisa ser validada pelos workflows e endpoints.
+### Marco 2 — Núcleo de estoque operacional
+- Catálogo separado de saldo, locais, lotes, séries, FEFO/FIFO e custo médio.
+- Transferência, reservas, ajustes e estornos em transações PostgreSQL.
+- Isolamento por organização e histórico/auditoria imutáveis.
+- Testes de concorrência e de falha na gravação do destino sem alteração parcial.
 
 ### Marco 3 — Sistema operacional MVP
 - requisições e inventário ativos
