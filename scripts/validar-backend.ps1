@@ -7,7 +7,7 @@ $headers=@{Authorization="Bearer $($token.access_token)"}
 function Api([string]$Metodo,[string]$Rota,$Body=$null,[hashtable]$Extra=@{}) {
     $cabecalhos=@{};foreach($chave in $headers.Keys){$cabecalhos[$chave]=$headers[$chave]}
     foreach($chave in $Extra.Keys){$cabecalhos[$chave]=$Extra[$chave]}
-    $parametros=@{Method=$Metodo;Uri="$ApiUrl/api/v1$Rota";Headers=$cabecalhos;TimeoutSec=15}
+    $parametros=@{Method=$Metodo;Uri="$ApiUrl/api/v1$Rota";Headers=$cabecalhos;TimeoutSec=15;ContentType='application/json'}
     if($null -ne $Body){$parametros.Body=($Body|ConvertTo-Json -Depth 10 -Compress);$parametros.ContentType='application/json'}
     return Invoke-RestMethod @parametros
 }
