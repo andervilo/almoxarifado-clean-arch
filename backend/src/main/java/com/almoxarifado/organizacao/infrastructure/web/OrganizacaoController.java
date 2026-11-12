@@ -15,6 +15,12 @@ public class OrganizacaoController {
     public record CriarOrganizacao(@NotNull UUID id, @NotBlank @Size(max=255) String nome, @NotBlank @Size(max=120) String codigo) {}
     public record AtualizarOrganizacao(@NotBlank @Size(max=255) String nome,@NotBlank @Size(max=120) String codigo,boolean ativa) {}
     public record OrganizacaoResponse(String nome,String codigo,boolean ativa) {}
+    public record ConfiguracaoRequest(@Min(1) @Max(365) int diasAlertaValidade) {}
+    public record ConfiguracaoResponse(int diasAlertaValidade) {}
+    @GetMapping("/organizacao/configuracoes")
+    public ConfiguracaoResponse configuracao() { return new ConfiguracaoResponse(service.configuracao().diasAlertaValidade()); }
+    @PutMapping("/organizacao/configuracoes")
+    public void configurar(@Valid @RequestBody ConfiguracaoRequest req) { service.configurar(req.diasAlertaValidade()); }
     public record SetorRequest(@NotBlank @Size(max=120) String codigo,@NotBlank @Size(max=255) String nome) {}
     public record SetorResponse(String codigo,String nome) {}
     public record UsuarioRequest(@NotBlank @Size(max=255) String codigo,@NotBlank @Size(max=255) String nome,

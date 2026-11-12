@@ -8,6 +8,13 @@ import com.almoxarifado.organizacao.domain.*;
 public class OrganizacaoJdbc implements OrganizacaoRepository {
     private final JdbcTemplate jdbc;
     public OrganizacaoJdbc(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+    public ConfiguracaoOrganizacao configuracao(UUID org) {
+        return jdbc.query("SELECT dias_alerta_validade FROM organizacao.configuracoes WHERE organizacao_id=?",
+            (rs,n)->new ConfiguracaoOrganizacao(rs.getInt(1)),org).stream().findFirst().orElse(new ConfiguracaoOrganizacao(30));
+    }
+    public void configurar(UUID org, ConfiguracaoOrganizacao configuracao) {
+        jdbc.update("INSERT INTO organizacao.configuracoes(organizacao_id,dias_alerta_validade) VALUES(?,?) ON CONFLICT(organizacao_id) DO UPDATE SET dias_alerta_validade=excluded.dias_alerta_validade",org,configuracao.diasAlertaValidade());
+    }
     public Optional<Organizacao> buscar(UUID id) {
         return jdbc.query("SELECT * FROM organizacao.organizacoes WHERE id = ?", (rs,n) -> {
             var org = new Organizacao(rs.getString("nome"), rs.getString("codigo"));

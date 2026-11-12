@@ -8,4 +8,6 @@ public interface OrganizacaoRepository {
     void salvarSetor(UUID organizacaoId, Setor setor);
     List<Usuario> usuarios(UUID organizacaoId);
     void salvarUsuario(UUID organizacaoId, Usuario usuario);
+    ConfiguracaoOrganizacao configuracao(UUID organizacaoId);
+    void configurar(UUID organizacaoId, ConfiguracaoOrganizacao configuracao);
 }

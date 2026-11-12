@@ -22,6 +22,14 @@ public class OrganizacaoService {
     public Organizacao consultar() {
         return repository.buscar(contexto.organizacaoId()).orElseThrow(()->new RecursoNaoEncontradoException("Organizacao nao cadastrada"));
     }
+    public ConfiguracaoOrganizacao configuracao() { consultar(); return repository.configuracao(contexto.organizacaoId()); }
+    @Transactional
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO')")
+    public void configurar(int dias) {
+        var org=organizacaoAtiva(); repository.configurar(org,new ConfiguracaoOrganizacao(dias));
+        auditoria.registrar(org,contexto.usuarioId(),"ORGANIZACAO_CONFIGURADA",org.toString());
+        eventos.publicar(new com.almoxarifado.organizacao.events.ConfiguracaoOrganizacaoAlterada(UUID.randomUUID(),Instant.now(),org,1,dias));
+    }
     @Transactional
     @PreAuthorize("hasRole('ADMIN_PLATAFORMA')")
     public UUID criar(UUID id, String nome, String codigo) {
