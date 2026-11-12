@@ -13,6 +13,7 @@ public class OrganizacaoJdbc implements OrganizacaoRepository {
             (rs,n)->new ConfiguracaoOrganizacao(rs.getInt(1)),org).stream().findFirst().orElse(new ConfiguracaoOrganizacao(30));
     }
     public void configurar(UUID org, ConfiguracaoOrganizacao configuracao) {
+        jdbc.queryForObject("SELECT id FROM organizacao.organizacoes WHERE id=? FOR UPDATE",UUID.class,org);
         jdbc.update("INSERT INTO organizacao.configuracoes(organizacao_id,dias_alerta_validade) VALUES(?,?) ON CONFLICT(organizacao_id) DO UPDATE SET dias_alerta_validade=excluded.dias_alerta_validade",org,configuracao.diasAlertaValidade());
     }
     public Optional<Organizacao> buscar(UUID id) {
