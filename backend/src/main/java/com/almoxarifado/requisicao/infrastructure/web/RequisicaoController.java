@@ -1,0 +1,32 @@
+package com.almoxarifado.requisicao.infrastructure.web;
+import java.util.*;
+import java.math.BigDecimal;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+import com.almoxarifado.requisicao.domain.Requisicao;
+import com.almoxarifado.requisicao.application.RequisicaoService;
+@RestController @RequestMapping("/api/v1/requisicoes")
+public class RequisicaoController {
+ private final RequisicaoService service;
+ public RequisicaoController(RequisicaoService service) { this.service=service; }
+ public record LinhaRequest(@NotNull UUID itemId,@NotNull @Positive @Digits(integer=15,fraction=4) BigDecimal quantidade) {}
+ public record CriarRequest(@NotNull UUID localId,@NotEmpty @Size(max=100) List<@Valid LinhaRequest> linhas) {}
+ public record LinhaResponse(UUID itemId,BigDecimal quantidade) {}
+ public record Response(UUID id,UUID localId,String solicitanteId,String status,String erro,List<LinhaResponse> linhas) {}
+ private Response resposta(Requisicao r) { return new Response(r.id(),r.localId(),r.solicitanteId(),r.status(),r.erro(),r.linhas().stream().map(l->new LinhaResponse(l.itemId(),l.quantidade())).toList()); }
+ @PostMapping @ResponseStatus(HttpStatus.CREATED) public Response criar(@Valid @RequestBody CriarRequest req) { return resposta(service.criar(req.localId(),req.linhas().stream().map(l->new Requisicao.Linha(l.itemId(),l.quantidade())).toList())); }
+ @GetMapping("/{id}") public Response buscar(@PathVariable UUID id) { return resposta(service.buscar(id)); }
+ @PutMapping("/{id}") public Response editar(@PathVariable UUID id,@Valid @RequestBody CriarRequest req) {
+  return resposta(service.editar(id,req.localId(),req.linhas().stream().map(l->new Requisicao.Linha(l.itemId(),l.quantidade())).toList()));
+ }
+ @GetMapping public List<Response> listar(@RequestParam(defaultValue="0") int pagina,@RequestParam(defaultValue="20") int tamanho) { return service.listar(pagina,tamanho).stream().map(this::resposta).toList(); }
+ @PostMapping("/{id}/{acao}") @ResponseStatus(HttpStatus.ACCEPTED) public Response acao(@PathVariable UUID id,@PathVariable String acao) {
+  return resposta(switch(acao) {
+   case "enviar" -> service.enviar(id);case "separar" -> service.separar(id);case "entregar" -> service.entregar(id);
+   case "cancelar" -> service.cancelar(id);case "confirmar-recebimento" -> service.confirmar(id);
+   default -> throw new IllegalArgumentException("Acao invalida");
+  });
+ }
+}
