@@ -69,7 +69,12 @@ public class EstoqueJdbc implements EstoqueRepository {
    """,(rs,n)->new Reserva(rs.getObject("posicao_id",UUID.class),rs.getBigDecimal("quantidade")),org,req,item);
  }
  public void reservar(UUID org,UUID req,UUID pos,BigDecimal quantidade) {
-  jdbc.update("INSERT INTO estoque.reservas(organizacao_id,requisicao_id,posicao_id,quantidade,status) VALUES(?,?,?,?,'ATIVA')",org,req,pos,quantidade);
+  int alteradas=jdbc.update("""
+   INSERT INTO estoque.reservas(organizacao_id,requisicao_id,posicao_id,quantidade,status) VALUES(?,?,?,?,'ATIVA')
+   ON CONFLICT(organizacao_id,requisicao_id,posicao_id) DO UPDATE SET quantidade=excluded.quantidade,status='ATIVA'
+   WHERE estoque.reservas.status<>'ATIVA'
+   """,org,req,pos,quantidade);
+  if(alteradas==0) throw new RegraNegocioException("RESERVA_DUPLICADA","Posicao ja reservada para o pedido");
  }
  public void concluirReserva(UUID org,UUID req,UUID item,String status) {
   jdbc.update("""
@@ -82,6 +87,18 @@ public class EstoqueJdbc implements EstoqueRepository {
    UPDATE estoque.reservas SET quantidade=CASE WHEN ?=0 THEN quantidade ELSE ? END,status=CASE WHEN ?=0 THEN 'CONSUMIDA' ELSE 'ATIVA' END
    WHERE organizacao_id=? AND requisicao_id=? AND posicao_id=? AND status='ATIVA'
    """,restante,restante,restante,org,req,pos);
+ }
+ public List<Alocacao> alocacoes(UUID org,UUID req,UUID item) {
+  return jdbc.query("""
+   SELECT p.id,p.local_id,p.lote,p.serie,p.validade,r.quantidade FROM estoque.reservas r JOIN estoque.posicoes p ON p.organizacao_id=r.organizacao_id AND p.id=r.posicao_id
+   WHERE r.organizacao_id=? AND r.requisicao_id=? AND p.item_id=? AND r.status='ATIVA' ORDER BY p.id
+   """,(rs,n)->new Alocacao(rs.getObject("id",UUID.class),rs.getObject("local_id",UUID.class),rs.getString("lote"),rs.getString("serie"),rs.getObject("validade",java.time.LocalDate.class),rs.getBigDecimal("quantidade")),org,req,item);
+ }
+ public long avancarRevisaoReserva(UUID org,UUID req,UUID item) {
+  return jdbc.queryForObject("""
+   INSERT INTO estoque.revisoes_reserva(organizacao_id,id,requisicao_id,item_id,revisao) VALUES(?,?,?,?,1)
+   ON CONFLICT(organizacao_id,requisicao_id,item_id) DO UPDATE SET revisao=estoque.revisoes_reserva.revisao+1 RETURNING revisao
+   """,Long.class,org,UUID.randomUUID(),req,item);
  }
  public BigDecimal custo(UUID org,UUID item,UUID almox) {
   return jdbc.query("SELECT custo FROM estoque.custos WHERE organizacao_id=? AND item_id=? AND almoxarifado_id=?",(rs,n)->rs.getBigDecimal(1),org,item,almox).stream().findFirst().orElse(BigDecimal.ZERO);

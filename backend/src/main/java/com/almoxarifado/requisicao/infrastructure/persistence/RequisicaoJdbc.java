@@ -68,4 +68,13 @@ public class RequisicaoJdbc implements RequisicaoRepository {
  public void registrarChaveEntrega(UUID org,UUID chave,UUID req,String assinatura,UUID comando) {
   jdbc.update("INSERT INTO requisicao.chaves_entrega(organizacao_id,chave,requisicao_id,assinatura,comando_id) VALUES(?,?,?,?,?)",org,chave,req,assinatura,comando);
  }
+ public List<Alocacao> alocacoes(UUID org,UUID req) {
+  return jdbc.query("SELECT * FROM requisicao.alocacoes WHERE organizacao_id=? AND requisicao_id=? ORDER BY item_id,posicao_id",(rs,n)->new Alocacao(rs.getObject("item_id",UUID.class),rs.getObject("posicao_id",UUID.class),rs.getObject("local_id",UUID.class),rs.getString("lote"),rs.getString("serie"),rs.getObject("validade",java.time.LocalDate.class),rs.getBigDecimal("quantidade")),org,req);
+ }
+ public Optional<ChaveEntrega> chaveRealocacao(UUID org,UUID chave) {
+  return jdbc.query("SELECT * FROM requisicao.chaves_realocacao WHERE organizacao_id=? AND chave=?",(rs,n)->new ChaveEntrega(rs.getObject("requisicao_id",UUID.class),rs.getString("assinatura"),rs.getObject("comando_id",UUID.class)),org,chave).stream().findFirst();
+ }
+ public void registrarChaveRealocacao(UUID org,UUID chave,UUID req,String assinatura,UUID comando) {
+  jdbc.update("INSERT INTO requisicao.chaves_realocacao(organizacao_id,chave,requisicao_id,assinatura,comando_id) VALUES(?,?,?,?,?)",org,chave,req,assinatura,comando);
+ }
 }

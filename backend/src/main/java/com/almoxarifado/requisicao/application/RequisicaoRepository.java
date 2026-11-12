@@ -14,4 +14,8 @@ public interface RequisicaoRepository {
  void bloquearChaveEntrega(UUID org,UUID chave);
  Optional<ChaveEntrega> chaveEntrega(UUID org,UUID chave);
  void registrarChaveEntrega(UUID org,UUID chave,UUID requisicao,String assinatura,UUID comando);
+ record Alocacao(UUID itemId,UUID posicaoId,UUID localId,String lote,String serie,java.time.LocalDate validade,java.math.BigDecimal quantidade) {}
+ List<Alocacao> alocacoes(UUID org,UUID requisicao);
+ Optional<ChaveEntrega> chaveRealocacao(UUID org,UUID chave);
+ void registrarChaveRealocacao(UUID org,UUID chave,UUID requisicao,String assinatura,UUID comando);
 }

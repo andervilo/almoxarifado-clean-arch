@@ -123,6 +123,12 @@ public class MotorEstoque {
         repository.operacao(org,operacao,comando,usuario,linhas);
         if(tipo.equals("ESTORNO")) repository.marcarEstorno(org,comando.referenciaId(),operacao);
         auditoria.registrar(org,usuario,"ESTOQUE_"+tipo,operacao.toString());
+        if(Set.of("RESERVA","LIBERACAO","ENTREGA").contains(tipo)) {
+            long revisao=repository.avancarRevisaoReserva(org,comando.referenciaId(),comando.itemId());
+            var alocacoes=repository.alocacoes(org,comando.referenciaId(),comando.itemId()).stream()
+                .map(a->new com.almoxarifado.requisicao.events.AlocacoesRequisicaoAtualizadas.Alocacao(a.posicaoId(),a.localId(),a.lote(),a.serie(),a.validade(),a.quantidade())).toList();
+            eventos.publicar(new com.almoxarifado.requisicao.events.AlocacoesRequisicaoAtualizadas(UUID.randomUUID(),Instant.now(),org,1,comando.referenciaId(),comando.itemId(),revisao,alocacoes));
+        }
         for(var p:alteradas.values()) eventos.publicar(new SaldoAlterado(UUID.randomUUID(),Instant.now(),org,1,p.id(),p.itemId(),p.localId(),p.quantidade(),p.reservado(),p.lote(),p.validade(),p.serie(),p.custo(),repository.revisao(org,p.id())));
         return operacao;
     }

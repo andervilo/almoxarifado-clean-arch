@@ -19,6 +19,7 @@ public class ResultadoEstoqueListener {
    case "RESERVANDO" -> e.sucesso()?"RESERVADA":"FALHA_RESERVA";
    case "ENTREGANDO" -> e.sucesso()?(r.linhas().stream().allMatch(l->l.pendente().signum()==0)?"ENTREGUE":"PARCIALMENTE_ENTREGUE"):(r.estadoAnterior()==null?"SEPARADA":r.estadoAnterior());
    case "CANCELANDO" -> e.sucesso()?"CANCELADA":(r.estadoAnterior()==null?"RESERVADA":r.estadoAnterior());
+   case "REALOCANDO" -> r.estadoAnterior()==null?"RESERVADA":r.estadoAnterior();
    default -> null;
   };
   if(estado==null) return;

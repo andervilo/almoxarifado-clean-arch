@@ -94,4 +94,26 @@ public class RequisicaoService {
  private void exigirLocal(UUID local) {
   if(contexto.almoxarifadosPermitidos()!=null) contexto.exigirAlmoxarifado(repository.almoxarifadoDoLocal(contexto.organizacaoId(),local));
  }
+ public List<RequisicaoRepository.Alocacao> alocacoes(UUID id) {buscar(id);return repository.alocacoes(contexto.organizacaoId(),id);}
+ @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
+ public Requisicao realocar(UUID id,UUID item,List<com.almoxarifado.requisicao.domain.AlocacaoReserva> alocacoes,String motivo,UUID chave) {
+  if(chave==null || motivo==null || motivo.isBlank() || alocacoes==null || alocacoes.isEmpty() || alocacoes.size()>100) throw new IllegalArgumentException("Chave, motivo e alocacoes obrigatorios");
+  var r=buscar(id,true);repository.bloquearChaveEntrega(r.organizacaoId(),chave);
+  String assinatura=item+":"+motivo+":"+alocacoes.stream().sorted(Comparator.comparing(com.almoxarifado.requisicao.domain.AlocacaoReserva::posicaoId))
+   .map(a->a.posicaoId()+":"+a.quantidade().stripTrailingZeros().toPlainString()).collect(java.util.stream.Collectors.joining(";"));
+  var anterior=repository.chaveRealocacao(r.organizacaoId(),chave);
+  if(anterior.isPresent()) {
+   if(!anterior.get().requisicaoId().equals(id) || !anterior.get().assinatura().equals(assinatura)) throw new com.almoxarifado.shared.domain.RegraNegocioException("IDEMPOTENCIA_CONFLITO","Chave reutilizada com outro conteudo");
+   return r;
+  }
+  r.exigirEstado("RESERVADA","SEPARADA","PARCIALMENTE_ENTREGUE");
+  var linha=r.linhas().stream().filter(l->l.itemId().equals(item)).findFirst().orElseThrow(()->new RecursoNaoEncontradoException("Item fora do pedido"));
+  var total=alocacoes.stream().map(com.almoxarifado.requisicao.domain.AlocacaoReserva::quantidade).reduce(java.math.BigDecimal.ZERO,java.math.BigDecimal::add);
+  if(linha.pendente().signum()==0 || total.compareTo(linha.pendente())!=0 || alocacoes.stream().map(com.almoxarifado.requisicao.domain.AlocacaoReserva::posicaoId).distinct().count()!=alocacoes.size())
+   throw new com.almoxarifado.shared.domain.RegraNegocioException("ALOCACAO_INVALIDA","Alocacoes devem preservar a quantidade restante do item");
+  var comando=UUID.randomUUID();var novo=r.transicionar("REALOCANDO",comando,null,r.status());
+  repository.registrarChaveRealocacao(r.organizacaoId(),chave,id,assinatura,comando);salvar(novo);
+  eventos.publicar(new com.almoxarifado.requisicao.events.RealocacaoReservaSolicitada(comando,Instant.now(),r.organizacaoId(),1,id,item,r.localId(),contexto.usuarioId(),motivo,
+   alocacoes.stream().map(a->new com.almoxarifado.requisicao.events.RealocacaoReservaSolicitada.Alocacao(a.posicaoId(),a.quantidade())).toList()));return novo;
+ }
 }

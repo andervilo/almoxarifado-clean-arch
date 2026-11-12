@@ -15,6 +15,16 @@ public class RequisicaoController {
  public record CriarRequest(@NotNull UUID localId,@NotEmpty @Size(max=100) List<@Valid LinhaRequest> linhas) {}
  public record LinhaResponse(UUID itemId,BigDecimal quantidade,BigDecimal atendida,BigDecimal pendente) {}
  public record EntregaRequest(@NotEmpty @Size(max=100) List<@Valid LinhaRequest> linhas) {}
+ public record AlocacaoRequest(@NotNull UUID posicaoId,@NotNull @Positive @Digits(integer=15,fraction=4) BigDecimal quantidade) {}
+ public record RealocarRequest(@NotBlank @Size(max=500) String motivo,@NotEmpty @Size(max=100) List<@Valid AlocacaoRequest> alocacoes) {}
+ public record AlocacaoResponse(UUID itemId,UUID posicaoId,UUID localId,String lote,String serie,java.time.LocalDate validade,BigDecimal quantidade) {}
+ @GetMapping("/{id}/alocacoes") public List<AlocacaoResponse> alocacoes(@PathVariable UUID id) {
+  return service.alocacoes(id).stream().map(a->new AlocacaoResponse(a.itemId(),a.posicaoId(),a.localId(),a.lote(),a.serie(),a.validade(),a.quantidade())).toList();
+ }
+ @PutMapping("/{id}/alocacoes/{item}") @ResponseStatus(HttpStatus.ACCEPTED)
+ public Response realocar(@PathVariable UUID id,@PathVariable UUID item,@RequestHeader("Idempotency-Key") UUID chave,@Valid @RequestBody RealocarRequest req) {
+  return resposta(service.realocar(id,item,req.alocacoes().stream().map(a->new com.almoxarifado.requisicao.domain.AlocacaoReserva(a.posicaoId(),a.quantidade())).toList(),req.motivo(),chave));
+ }
  public record Response(UUID id,UUID localId,String solicitanteId,String status,String erro,List<LinhaResponse> linhas) {}
  private Response resposta(Requisicao r) { return new Response(r.id(),r.localId(),r.solicitanteId(),r.status(),r.erro(),r.linhas().stream().map(l->new LinhaResponse(l.itemId(),l.quantidade(),l.atendida(),l.pendente())).toList()); }
  @PostMapping("/{id}/entregar") @ResponseStatus(HttpStatus.ACCEPTED)
