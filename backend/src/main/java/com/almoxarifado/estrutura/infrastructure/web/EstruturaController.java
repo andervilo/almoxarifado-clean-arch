@@ -10,13 +10,14 @@ import com.almoxarifado.estrutura.domain.*;
 @RequestMapping("/api/v1/almoxarifados")
 public class EstruturaController {
  private final EstruturaService service;
- public EstruturaController(EstruturaService service) { this.service=service; }
+ private final EstruturaMapper mapper;
+ public EstruturaController(EstruturaService service,EstruturaMapper mapper) { this.service=service; this.mapper=mapper; }
  public record AlmoxarifadoRequest(@NotBlank @Size(max=120) String codigo,@NotBlank @Size(max=255) String nome,boolean ativo) {}
  public record LocalRequest(@NotBlank @Size(max=120) String codigo,@NotBlank @Size(max=255) String descricao,boolean ativo) {}
  public record AlmoxarifadoResponse(UUID id,String codigo,String nome,boolean ativo) {}
  public record LocalResponse(UUID id,UUID almoxarifadoId,String codigo,String descricao,boolean ativo) {}
- private AlmoxarifadoResponse resposta(Almoxarifado v) { return new AlmoxarifadoResponse(v.id(),v.codigo(),v.nome(),v.ativo()); }
- private LocalResponse resposta(LocalArmazenamento v) { return new LocalResponse(v.id(),v.almoxarifadoId(),v.codigo(),v.descricao(),v.ativo()); }
+ private AlmoxarifadoResponse resposta(Almoxarifado v) { return mapper.resposta(v); }
+ private LocalResponse resposta(LocalArmazenamento v) { return mapper.resposta(v); }
  @GetMapping public List<AlmoxarifadoResponse> listar(@RequestParam(defaultValue="0") int pagina,@RequestParam(defaultValue="20") int tamanho) { return service.almoxarifados(pagina,tamanho).stream().map(this::resposta).toList(); }
  @GetMapping("/{id}") public AlmoxarifadoResponse buscar(@PathVariable UUID id) { return resposta(service.buscarAlmoxarifado(id)); }
  @PostMapping @ResponseStatus(HttpStatus.CREATED)

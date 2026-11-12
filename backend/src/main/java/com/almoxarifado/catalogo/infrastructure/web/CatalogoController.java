@@ -11,7 +11,8 @@ import com.almoxarifado.catalogo.domain.*;
 @RequestMapping("/api/v1/catalogo")
 public class CatalogoController {
  private final CatalogoService service;
- public CatalogoController(CatalogoService service) { this.service=service; }
+ private final CatalogoMapper mapper;
+ public CatalogoController(CatalogoService service,CatalogoMapper mapper) { this.service=service; this.mapper=mapper; }
  public record CadastroRequest(@NotBlank @Size(max=120) String codigo,@NotBlank @Size(max=255) String nome,boolean ativo) {}
  public record CadastroResponse(UUID id,String codigo,String nome,boolean ativo) {}
  public record ItemRequest(@NotBlank @Size(max=120) String codigo,@NotBlank @Size(max=255) String descricao,
@@ -20,7 +21,7 @@ public class CatalogoController {
  public record ItemResponse(UUID id,String codigo,String descricao,UUID categoriaId,UUID unidadeMedidaId,
   TipoRastreabilidade rastreabilidade,BigDecimal estoqueMinimo,BigDecimal estoqueMaximo,boolean ativo) {}
 
- private CadastroResponse resposta(Categoria v) { return new CadastroResponse(v.id(),v.codigo(),v.nome(),v.ativo()); }
+ private CadastroResponse resposta(Categoria v) { return mapper.resposta(v); }
  @GetMapping("/categorias")
  public List<CadastroResponse> listarCategoria(@RequestParam(defaultValue="0") int pagina,@RequestParam(defaultValue="20") int tamanho) { return service.listarCategoria(pagina,tamanho).stream().map(this::resposta).toList(); }
  @GetMapping("/categorias/{id}")
@@ -34,7 +35,7 @@ public class CatalogoController {
   return resposta(service.salvarCategoria(id,true,new Categoria(id,service.organizacaoId(),req.codigo(),req.nome(),req.ativo())));
  }
 
- private CadastroResponse resposta(UnidadeMedida v) { return new CadastroResponse(v.id(),v.codigo(),v.nome(),v.ativo()); }
+ private CadastroResponse resposta(UnidadeMedida v) { return mapper.resposta(v); }
  @GetMapping("/unidades-medida")
  public List<CadastroResponse> listarUnidadeMedida(@RequestParam(defaultValue="0") int pagina,@RequestParam(defaultValue="20") int tamanho) { return service.listarUnidadeMedida(pagina,tamanho).stream().map(this::resposta).toList(); }
  @GetMapping("/unidades-medida/{id}")
@@ -48,7 +49,7 @@ public class CatalogoController {
   return resposta(service.salvarUnidadeMedida(id,true,new UnidadeMedida(id,service.organizacaoId(),req.codigo(),req.nome(),req.ativo())));
  }
 
- private CadastroResponse resposta(Fornecedor v) { return new CadastroResponse(v.id(),v.codigo(),v.nome(),v.ativo()); }
+ private CadastroResponse resposta(Fornecedor v) { return mapper.resposta(v); }
  @GetMapping("/fornecedores")
  public List<CadastroResponse> listarFornecedor(@RequestParam(defaultValue="0") int pagina,@RequestParam(defaultValue="20") int tamanho) { return service.listarFornecedor(pagina,tamanho).stream().map(this::resposta).toList(); }
  @GetMapping("/fornecedores/{id}")
@@ -62,7 +63,7 @@ public class CatalogoController {
   return resposta(service.salvarFornecedor(id,true,new Fornecedor(id,service.organizacaoId(),req.codigo(),req.nome(),req.ativo())));
  }
 
- private ItemResponse resposta(Item v) { return new ItemResponse(v.id(),v.codigo(),v.descricao(),v.categoriaId(),v.unidadeMedidaId(),v.rastreabilidade(),v.estoqueMinimo(),v.estoqueMaximo(),v.ativo()); }
+ private ItemResponse resposta(Item v) { return mapper.resposta(v); }
  @GetMapping("/itens")
  public List<ItemResponse> listarItem(@RequestParam(defaultValue="0") int pagina,@RequestParam(defaultValue="20") int tamanho) { return service.listarItem(pagina,tamanho).stream().map(this::resposta).toList(); }
  @GetMapping("/itens/{id}")
