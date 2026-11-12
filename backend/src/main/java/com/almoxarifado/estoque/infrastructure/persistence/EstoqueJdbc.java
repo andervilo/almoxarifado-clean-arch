@@ -55,7 +55,7 @@ public class EstoqueJdbc implements EstoqueRepository {
   return jdbc.query("SELECT * FROM estoque.linhas_operacao WHERE organizacao_id=? AND operacao_id=? ORDER BY id",(rs,n)->new Linha(rs.getObject("posicao_id",UUID.class),rs.getBigDecimal("quantidade"),rs.getBigDecimal("custo")),org,operacao);
  }
  public List<Map<String,Object>> historico(UUID org,UUID item,int limite,int deslocamento,Set<UUID> escopo) {
-  String ids=com.almoxarifado.shared.infrastructure.persistence.FiltroEscopoSql.array(escopo);
+  String ids=com.almoxarifado.shared.infrastructure.sql.FiltroEscopoSql.array(escopo);
   return jdbc.queryForList("""
    SELECT o.id,o.item_id,o.tipo,o.usuario_id,o.motivo,o.criado_em FROM estoque.operacoes o
    WHERE o.organizacao_id=? AND o.item_id=? AND (?::uuid[] IS NULL OR EXISTS(
@@ -144,7 +144,7 @@ public class EstoqueJdbc implements EstoqueRepository {
   jdbc.update("INSERT INTO estoque.processamentos_integracao(organizacao_id,evento_id) VALUES(?,?)",org,evento);
  }
  public List<Map<String,Object>> rastrear(UUID org,UUID item,String lote,String serie,int limite,int deslocamento,Set<UUID> escopo) {
-  String ids=com.almoxarifado.shared.infrastructure.persistence.FiltroEscopoSql.array(escopo);
+  String ids=com.almoxarifado.shared.infrastructure.sql.FiltroEscopoSql.array(escopo);
   return jdbc.queryForList("""
    SELECT o.id AS operacao_id,o.tipo,o.usuario_id,o.motivo,o.criado_em,p.id AS posicao_id,p.local_id,p.lote,p.serie,p.validade,l.quantidade,l.custo
    FROM estoque.operacoes o JOIN estoque.linhas_operacao l ON l.organizacao_id=o.organizacao_id AND l.operacao_id=o.id
@@ -156,7 +156,7 @@ public class EstoqueJdbc implements EstoqueRepository {
    """,org,item,lote,lote,serie,serie,ids,ids,limite,deslocamento);
  }
  public List<Map<String,Object>> custos(UUID org,UUID item,Set<UUID> escopo) {
-  String ids=com.almoxarifado.shared.infrastructure.persistence.FiltroEscopoSql.array(escopo);
+  String ids=com.almoxarifado.shared.infrastructure.sql.FiltroEscopoSql.array(escopo);
   return jdbc.queryForList("SELECT almoxarifado_id,quantidade,custo FROM estoque.custos WHERE organizacao_id=? AND item_id=? AND (?::uuid[] IS NULL OR almoxarifado_id=ANY(?::uuid[])) ORDER BY almoxarifado_id",org,item,ids,ids);
  }
  public UUID almoxarifadoDoLocal(UUID org,UUID local) {

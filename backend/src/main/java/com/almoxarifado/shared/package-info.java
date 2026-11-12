@@ -3,7 +3,6 @@
  * e infraestrutura transversal (segurança, tratamento de erros, migrações).
  */
 @org.springframework.modulith.ApplicationModule(
-    displayName = "Shared Kernel",
-    type = org.springframework.modulith.ApplicationModule.Type.OPEN
+    displayName = "Shared Kernel"
 )
 package com.almoxarifado.shared;

@@ -4,7 +4,7 @@ import org.springframework.jdbc.core.*;
 import org.springframework.stereotype.Repository;
 import com.almoxarifado.alerta.application.AlertaRepository;
 import com.almoxarifado.alerta.domain.Alerta;
-import com.almoxarifado.shared.infrastructure.persistence.FiltroEscopoSql;
+import com.almoxarifado.shared.infrastructure.sql.FiltroEscopoSql;
 @Repository
 public class AlertaJdbc implements AlertaRepository {
  private final JdbcTemplate jdbc;

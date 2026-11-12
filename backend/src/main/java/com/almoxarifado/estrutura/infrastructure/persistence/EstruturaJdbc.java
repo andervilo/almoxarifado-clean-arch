@@ -20,7 +20,7 @@ public class EstruturaJdbc implements EstruturaRepository {
   return jdbc.query("SELECT * FROM estrutura.locais WHERE organizacao_id=? AND id=?",LOCAL,org,id).stream().findFirst();
  }
  public List<Almoxarifado> almoxarifados(UUID org,int limite,int deslocamento,Set<UUID> escopo) {
-  String ids=com.almoxarifado.shared.infrastructure.persistence.FiltroEscopoSql.array(escopo);
+  String ids=com.almoxarifado.shared.infrastructure.sql.FiltroEscopoSql.array(escopo);
   return jdbc.query("SELECT * FROM estrutura.almoxarifados WHERE organizacao_id=? AND (?::uuid[] IS NULL OR id=ANY(?::uuid[])) ORDER BY codigo,id LIMIT ? OFFSET ?",ALMOX,org,ids,ids,limite,deslocamento);
  }
  public List<LocalArmazenamento> locais(UUID org,UUID almox,int limite,int deslocamento) {

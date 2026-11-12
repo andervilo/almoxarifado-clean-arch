@@ -1,4 +1,4 @@
-package com.almoxarifado.shared.infrastructure.persistence;
+package com.almoxarifado.shared.infrastructure.sql;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;

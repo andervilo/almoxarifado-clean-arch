@@ -99,6 +99,14 @@ rejeitando eventos duplicados e antigos. Uma criação pode levar alguns instant
 para se tornar disponível no próximo módulo; o cliente deve consultar o estado
 e repetir operações idempotentes quando receber indisponibilidade de projeção.
 
+O kernel `shared` é um módulo fechado com interfaces nomeadas `application`,
+`domain`, `events` e `sql`. As dependências declaram `shared::nome` explicitamente;
+segurança e implementações de persistência permanecem internas. A interface
+`sql` contém apenas o utilitário utilizado pelos adaptadores JDBC. A anotação
+no `domain/package-info.java` descreve essa fronteira; os tipos de negócio
+continuam independentes de framework. Esse modelo segue a
+[exposição de interfaces do Spring Modulith](https://docs.spring.io/spring-modulith/reference/fundamentals.html).
+
 Requisições seguem:
 
 ```text

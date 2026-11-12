@@ -17,6 +17,8 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule dominioNaoDependeDeFramework = noClasses()
         .that().resideInAPackage("com.almoxarifado..domain..")
+        // package-info descreve a fronteira modular; nao e um tipo de negocio.
+        .and().doNotHaveSimpleName("package-info")
         .should().dependOnClassesThat().resideInAnyPackage(
             "org.springframework..",
             "jakarta.persistence..",

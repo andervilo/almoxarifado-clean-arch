@@ -24,7 +24,7 @@ public class RequisicaoJdbc implements RequisicaoRepository {
   return jdbc.query("SELECT * FROM requisicao.requisicoes WHERE organizacao_id=? AND id=?"+(bloquear?" FOR UPDATE":""),mapper(),org,id).stream().findFirst();
  }
  public List<Requisicao> listar(UUID org,String solicitante,int limite,int deslocamento,Set<UUID> escopo) {
-  String ids=com.almoxarifado.shared.infrastructure.persistence.FiltroEscopoSql.array(escopo);
+  String ids=com.almoxarifado.shared.infrastructure.sql.FiltroEscopoSql.array(escopo);
   return jdbc.query("""
    SELECT r.* FROM requisicao.requisicoes r LEFT JOIN requisicao.locais_projecao l ON l.organizacao_id=r.organizacao_id AND l.id=r.local_id
    WHERE r.organizacao_id=? AND (?::text IS NULL OR r.solicitante_id=?) AND (?::uuid[] IS NULL OR l.almoxarifado_id=ANY(?::uuid[]))
@@ -81,7 +81,7 @@ public class RequisicaoJdbc implements RequisicaoRepository {
   return jdbc.query("SELECT * FROM requisicao.setores_projecao WHERE organizacao_id=? AND codigo=?",(rs,n)->new SetorReferencia(codigo,rs.getString("nome"),rs.getString("centro_custo")),org,codigo).stream().findFirst();
  }
  public List<Map<String,Object>> consumo(UUID org,java.time.LocalDate inicio,java.time.LocalDate fim,Set<UUID> escopo,int limite,int deslocamento) {
-  String ids=com.almoxarifado.shared.infrastructure.persistence.FiltroEscopoSql.array(escopo);
+  String ids=com.almoxarifado.shared.infrastructure.sql.FiltroEscopoSql.array(escopo);
   return jdbc.queryForList("""
    SELECT r.setor_codigo,r.centro_custo,c.item_id,sum(c.quantidade) AS quantidade,sum(c.custo_total) AS custo_total
    FROM requisicao.consumo c JOIN requisicao.requisicoes r ON r.organizacao_id=c.organizacao_id AND r.id=c.requisicao_id
