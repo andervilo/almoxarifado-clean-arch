@@ -28,6 +28,7 @@ public class FlywayModulosConfig {
     /** Ordem de execução das migrações. {@code modulith} guarda o Event Publication Registry. */
     public static final List<String> SCHEMAS_MODULOS = List.of(
         "modulith",
+        "shared",
         "organizacao",
         "catalogo",
         "estrutura",

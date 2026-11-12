@@ -49,6 +49,12 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             "O recurso foi alterado por outra operação. Tente novamente.", "CONFLITO_CONCORRENCIA");
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ProblemDetail handleIntegridade(org.springframework.dao.DataIntegrityViolationException ex) {
+        return problema(HttpStatus.CONFLICT, "Conflito de dados",
+            "Codigo duplicado ou referencia invalida para esta organizacao.", "CONFLITO_DADOS");
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail handleAcessoNegado(AccessDeniedException ex) {
         return problema(HttpStatus.FORBIDDEN, "Acesso negado",
