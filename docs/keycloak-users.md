@@ -5,6 +5,9 @@
 - nome: `almoxarifado`
 - PostgreSQL exposto em `localhost:6432` no ambiente local
 - Keycloak exposto em `http://localhost:8181`
+- database exclusivo do Keycloak: `keycloak` (a aplicação usa `almoxarifado`)
+- importação automática: `docker/keycloak/import/almoxarifado-realm.json`
+- organização de demonstração: `0190f5a0-0000-7000-8000-000000000001`
 
 ## Usuários de desenvolvimento
 
@@ -30,12 +33,21 @@
 - Em produção, as credenciais devem ser alteradas e armazenadas em um gerenciador de segredos.
 - Cada usuário deve possuir a role adequada conforme o perfil do domínio.
 
-## Como criar via Keycloak
+## Provisionamento e verificação
 
-1. Acesse o console do Keycloak em `http://localhost:8081`.
-2. Entre com `admin / admin`.
-3. Crie o realm `almoxarifado`.
-4. Crie os roles listados acima.
-5. Crie os usuários com as senhas sugeridas.
-6. Atribua a role correta para cada usuário.
-7. Configure o client do backend e o client do frontend conforme o projeto.
+Execute `docker compose up --build`. Em um banco de destino novo, o Keycloak importa
+automaticamente o realm, os clients, as roles e os usuários acima. O console fica
+em `http://localhost:8181`, com `admin / admin` por padrão no ambiente local.
+
+- `almoxarifado-backend`: resource server, não emite tokens nem mantém senhas.
+- `almoxarifado-frontend`: client público, Authorization Code + PKCE S256;
+  redirecionamento e CORS em `http://localhost:4200`.
+- Access tokens incluem a audience `almoxarifado-backend` e o claim UUID
+  `organizacao_id`. Somente administradores do Keycloak podem editar esse atributo.
+- O grant de senha está habilitado apenas para os testes locais com o script
+  `scripts/validar-fundacao.ps1`; a interface deve usar PKCE.
+
+A importação não atualiza realms existentes. Se o banco `keycloak` já contiver o
+realm, ajuste clients, mappers e usuários pelo console/API administrativa,
+preservando os dados. A organização do token ainda não corresponde a um cadastro
+persistido no módulo `organizacao`, cuja implementação é a próxima etapa.

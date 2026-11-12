@@ -76,6 +76,37 @@ Isso deve levantar:
 - PostgreSQL
 - Keycloak
 
+O Compose constrói as imagens de PostgreSQL e Keycloak com os scripts e o realm
+incluídos, sem bind mounts de caminhos locais. O serviço `postgres-init` cria o
+database `keycloak` de forma idempotente, inclusive em volumes existentes. O backend
+só inicia depois de PostgreSQL e Keycloak estarem prontos.
+
+Para executar apenas a infraestrutura e iniciar o backend pela IDE:
+
+```bash
+docker compose up -d --build postgres postgres-init keycloak
+cd backend
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+```
+
+O profile `docker` usa os nomes dos serviços na rede interna; `local` usa as portas
+publicadas no host. Os tokens sempre têm issuer público
+`http://localhost:8181/realms/almoxarifado`, enquanto o backend em Docker busca as
+chaves em `http://keycloak:8080`. A audience exigida é `almoxarifado-backend`.
+
+### Volumes de versões anteriores
+
+Não é necessário remover o volume PostgreSQL. Tabelas antigas em `public` são
+preservadas; as novas migrações usam schemas e históricos próprios por módulo,
+sem `baseline-on-migrate`. Dados de estoque que já existam em `public` precisam de
+migração explícita antes de operar na nova estrutura; não são copiados automaticamente.
+
+Ao mudar o Keycloak do database `almoxarifado` para `keycloak`, o realm de
+desenvolvimento é importado no banco novo. Configurações e contas antigas continuam
+no banco anterior. A importação de inicialização não sobrescreve um realm que já
+exista no banco de destino; alterações posteriores exigem atualização pelo console
+ou pela API administrativa do Keycloak.
+
 ### Frontend
 
 ```bash
@@ -93,6 +124,43 @@ npm start
 - PostgreSQL: localhost:6432
 - Swagger/OpenAPI: http://localhost:8080/swagger-ui/index.html
 - Frontend: http://localhost:4200
+
+## Validação da fundação
+
+```bash
+cd backend
+mvn clean verify
+```
+
+Os testes de integração exigem Docker e usam PostgreSQL 16 via Testcontainers.
+Cobrem migrações em banco ocupado por tabelas legadas, reinicialização sem perda
+de dados e registro transacional de eventos do Modulith. ArchUnit e
+`ApplicationModules.verify()` verificam as fronteiras arquiteturais.
+
+Com o Compose em execução, valide tokens reais e os cinco perfis de desenvolvimento:
+
+```powershell
+./scripts/validar-fundacao.ps1
+```
+
+No Windows com execução de scripts desabilitada, use uma liberação apenas para o
+processo de validação:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/validar-fundacao.ps1
+```
+
+O script verifica health checks, OpenAPI, sessão autenticada em
+`GET /api/v1/auth/me`, organização do token, permissões do Actuator e rejeição de
+tokens inválidos ou sem a audience da API. Não imprime tokens. O grant de senha é
+usado apenas nesse teste local; a SPA deverá usar Authorization Code com PKCE.
+As chamadas do script usam `127.0.0.1` para evitar diferenças de resolução IPv6
+entre Windows e Docker Linux; o issuer do token continua sendo `localhost`.
+
+As credenciais e a organização de demonstração estão em
+[docs/keycloak-users.md](docs/keycloak-users.md). O endpoint de sessão confirma os
+claims; o isolamento de dados de negócio ainda será implementado nos repositórios
+e casos de uso de cada módulo.
 
 ---
 
@@ -134,11 +202,10 @@ PLANO_EXECUCAO.md
 
 ## Próxima etapa
 
-- Implementar a base do backend
-- Configurar Docker e Keycloak
-- Implementar autenticação e autorização
-- Implementar módulo de estoque
-- Evoluir para requisições, inventário e alertas
+- Implementar persistência, casos de uso e endpoints de organização com isolamento por tenant.
+- Implementar catálogo e estrutura física.
+- Integrar o domínio de estoque à persistência e aos endpoints transacionais.
+- Evoluir para requisições, inventário, alertas e autenticação da interface Angular.
 
 ---
 

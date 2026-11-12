@@ -67,69 +67,23 @@ A aplicação será executada em containers para padronizar desenvolvimento, tes
 
 O ambiente completo inclui a aplicação, PostgreSQL e o Keycloak, permitindo autenticação real em desenvolvimento e testes.
 
-```yaml
-services:
-  db:
-    image: postgres:16-alpine
-    container_name: almox-postgres
-    environment:
-      POSTGRES_DB: almoxarifado
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+A configuração executável está em [`docker-compose.yml`](../docker-compose.yml).
+Os serviços são `postgres`, `postgres-init`, `keycloak` e `app`. O PostgreSQL usa o
+volume persistente `postgres_data`; o preparo idempotente cria o database separado
+do Keycloak também em volumes já existentes. Scripts e realm são incluídos nas
+imagens para compatibilidade com Docker Desktop e daemons Linux remotos.
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: almox-app
-    depends_on:
-      - db
-      - keycloak
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/almoxarifado
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8081/realms/almoxarifado
-    ports:
-      - "8080:8080"
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:24.0
-    container_name: almox-keycloak
-    command: start-dev
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_HTTP_PORT: 8081
-      KC_HOSTNAME_STRICT: false
-    ports:
-      - "8081:8081"
-
-volumes:
-  postgres_data:
-```
+As portas no host são `6432` (PostgreSQL), `8181` (Keycloak) e `8080` (API). Na rede
+interna são `postgres:5432`, `keycloak:8080` e `app:8080`. O issuer permanece a URL
+pública `http://localhost:8181/realms/almoxarifado`; o JWKS usa a URL interna no
+profile `docker`. Health checks ordenam a inicialização dos serviços.
 
 #### 1.2.2 Dockerfile
 
-```dockerfile
-FROM eclipse-temurin:21-jdk AS build
-WORKDIR /workspace
-COPY . .
-RUN ./gradlew clean build -x test
-
-FROM eclipse-temurin:21-jre
-WORKDIR /app
-COPY --from=build /workspace/build/libs/*.jar app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
-```
-
-> Em projetos Maven, a etapa de build pode usar `mvn clean package -DskipTests`. O objetivo é manter a imagem reprodutível e pronta para deploy em qualquer ambiente.
+O [`backend/Dockerfile`](../backend/Dockerfile) usa Maven/JDK 21 para construir o
+artefato e JRE 21 em execução, com usuário sem privilégios e health check de
+readiness. Os testes com Testcontainers rodam antes, no host ou no CI, com
+`mvn clean verify`; o build da imagem usa `-DskipTests`.
 
 #### 1.2.3 Estratégia de migrações com Flyway
 
@@ -176,7 +130,7 @@ src/
 - `docker compose up --build` prepara o PostgreSQL, o Keycloak e a aplicação.
 - `docker compose down -v` reinicia o ambiente limpo.
 - O profile `docker` deve ativar configurações específicas para execução em container.
-- Em desenvolvimento, o banco pode ser acessado via `localhost:5432`, a API via `http://localhost:8080` e o Keycloak via `http://localhost:8081`.
+- Em desenvolvimento, o banco pode ser acessado via `localhost:6432`, a API via `http://localhost:8080` e o Keycloak via `http://localhost:8181`.
 
 ---
 
@@ -601,7 +555,7 @@ A API deve aderir a um padrão de erros em estrutura padronizada, por exemplo:
 ```yaml
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/almoxarifado
+    url: jdbc:postgresql://localhost:6432/almoxarifado
     username: postgres
     password: postgres
   flyway:
@@ -610,16 +564,20 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8081/realms/almoxarifado
+          issuer-uri: http://localhost:8181/realms/almoxarifado
+          jwk-set-uri: http://localhost:8181/realms/almoxarifado/protocol/openid-connect/certs
+          audiences: almoxarifado-backend
 ```
 
 ### 7.3 Variáveis de ambiente
 
-- `SPRING_DATASOURCE_URL`
-- `SPRING_DATASOURCE_USERNAME`
-- `SPRING_DATASOURCE_PASSWORD`
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
 - `SPRING_PROFILES_ACTIVE`
-- `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI`
+- `KEYCLOAK_ISSUER_URI`
+- `KEYCLOAK_JWK_SET_URI`
+- `CORS_ALLOWED_ORIGINS`
 - `KEYCLOAK_ADMIN`
 - `KEYCLOAK_ADMIN_PASSWORD`
 
@@ -1381,7 +1339,7 @@ A transferência acontece **dentro do módulo `estoque`** numa única transaçã
 
 | Módulo | Método e rota | Descrição |
 |--------|---------------|-----------|
-| organizacao | `POST /auth/login` · `POST /auth/refresh` | Autenticação |
+| shared | `GET /auth/me` | Sessão do usuário autenticado pelo Keycloak |
 | organizacao | `GET/PUT /organizacao` · `PUT /organizacao/configuracoes` | Dados e configurações da organização |
 | organizacao | `CRUD /setores` · `CRUD /usuarios` | Setores e usuários |
 | catalogo | `CRUD /itens` · `POST /itens/{id}/inativar` · `POST /itens/{id}/reativar` | Itens |
@@ -1412,13 +1370,13 @@ A transferência acontece **dentro do módulo `estoque`** numa única transaçã
 
 ## 10. Segurança
 
-- Spring Security como **resource server JWT**. O módulo `organizacao` emite os tokens (assinatura RS256) no MVP; um IdP externo (Keycloak etc.) pode substituí-lo no futuro.
-- *Claims*: `sub` (usuarioId), `org` (organizacaoId), `roles`, `almoxarifados` (escopo opcional).
-- Senhas com BCrypt.
+- Spring Security como **resource server JWT**, validando assinatura, expiração, issuer do Keycloak e audience `almoxarifado-backend`. O backend não emite tokens nem armazena senhas.
+- Login, refresh e logout pertencem ao Keycloak via OIDC/OAuth2; a SPA usa Authorization Code + PKCE.
+- *Claims*: `sub` (identidade no Keycloak), `organizacao_id` (UUID do tenant), `realm_access.roles` (perfis). Escopo por almoxarifado será definido com os workflows correspondentes.
 
 | Perfil | Permissões principais |
 |--------|-----------------------|
-| `ADMIN_PLATAFORMA` | Gerenciar organizações *(se multi-tenant for confirmado)* |
+| `ADMIN_PLATAFORMA` | Gerenciar organizações da instalação multi-tenant |
 | `ADMIN_ORGANIZACAO` | Tudo dentro da organização, incluindo usuários e configurações |
 | `GESTOR` | Leitura geral, relatórios, alertas |
 | `ALMOXARIFE` | Movimentações, atendimento de requisições, inventário (nos almoxarifados permitidos) |

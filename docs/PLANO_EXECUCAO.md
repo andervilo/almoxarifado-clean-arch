@@ -6,14 +6,23 @@ Este plano define a sequência técnica de implementação do sistema, priorizan
 
 A ideia é implementar primeiro o núcleo de negócio (estoque), depois expandir para requisições, inventário, alertas e interface.
 
-## Status atual do projeto (atualizado em 2026-11-11)
+## Status atual do projeto (atualizado em 2026-11-12)
 
 ### Concluído
 - estrutura inicial do monorepo com backend e frontend;
 - backend em Java 21 com Spring Boot e Maven configurado;
-- ambiente local com Docker Compose para PostgreSQL e Keycloak;
+- Dockerfile do backend e Compose com app, PostgreSQL e Keycloak;
 - projeto do backend compilando e testando em ambiente local;
-- autenticação via Keycloak configurada e realm `almoxarifado` provisionado;
+- Keycloak em database separado, com importação do realm, roles e claim de organização;
+- resource server com validação de issuer/audience e conversão de roles;
+- endpoint `GET /api/v1/auth/me` com autorização por perfil e organização válida;
+- schemas e históricos Flyway independentes por módulo, sem baseline automático;
+- fronteiras verificadas por ArchUnit e Spring Modulith;
+- testes com PostgreSQL real para migrações e publicação de eventos após commit/rollback;
+- validação da fundação: `mvn clean verify` com 40 testes passando, build Angular
+  compilado e Compose com app/PostgreSQL/Keycloak saudáveis;
+- teste HTTP com tokens reais dos cinco perfis, claim de organização, RBAC do
+  Actuator e rejeição de token inválido ou sem audience da API;
 - módulo de estoque com domínio implementado e validado:
   - saldo e validação de saída;
   - bloqueio de item inativo;
@@ -23,12 +32,13 @@ A ideia é implementar primeiro o núcleo de negócio (estoque), depois expandir
 - migração inicial do schema do estoque com Flyway;
 - entidades JPA para persistência do estoque criadas.
 
-### Em andamento
-- finalização dos módulos de organização e usuários;
-- cadastro de itens, almoxarifados e locais físicos;
-- integração do backend com autenticação e autorização em nível de casos de uso;
-- implementação do fluxo de requisições e inventário;
-- desenvolvimento do frontend Angular com telas do MVP.
+### Pendente
+- persistência, casos de uso e endpoints de organização e usuários;
+- isolamento por `organizacao_id` nas operações de negócio;
+- catálogo e estrutura física;
+- casos de uso transacionais e endpoints do estoque;
+- requisições, inventário e alertas;
+- autenticação e telas do frontend Angular (atualmente o projeto padrão do CLI).
 
 ### Próximo foco
 - concluir o módulo de organização e permissões;
@@ -168,7 +178,7 @@ Entregar uma solução funcional para:
 ## 5. Módulo de estoque (núcleo do sistema)
 
 ### Status
-✅ Concluído no núcleo de domínio e persistência inicial
+Parcial: protótipo do domínio e mapeamentos JPA. Ainda sem casos de uso ou endpoints.
 
 ### Tarefas
 - criar `MovimentacaoEstoque`
@@ -375,10 +385,10 @@ Entregar uma solução funcional para:
 ## Sequência recomendada de execução
 
 1. ✅ infraestrutura + docker + db + flyway
-2. ✅ Keycloak + autenticação
+2. 🔄 Keycloak + autenticação (backend configurado; fluxo OIDC da SPA pendente)
 3. 🔄 organização e usuários
 4. 🔄 catálogo + estrutura física
-5. ✅ estoque + regras de negócio (núcleo validado)
+5. 🔄 estoque + regras de negócio (protótipo do domínio testado; persistência operacional pendente)
 6. ⏳ requisições
 7. ⏳ inventário
 8. ⏳ alertas
@@ -396,12 +406,11 @@ Entregar uma solução funcional para:
 - Flyway ativo
 - Keycloak autenticando
 
-### Marco 2 — Núcleo de estoque pronto
-- ✅ cadastro de itens e entradas/saídas operando no domínio
-- ✅ saldo consistente
-- ✅ lote e validade funcionando
-- ✅ histórico de movimentações preservado
-- ✅ regra FEFO/FIFO validada em testes
+### Marco 2 — Núcleo de estoque (pendente)
+- Protótipo de entrada, saída, lote, validade e FEFO/FIFO com testes unitários.
+- Faltam catálogo separado do saldo, almoxarifado/local, reservas, transferências,
+  estornos, custo médio, número de série, isolamento por organização e auditoria operacional.
+- A integridade transacional ainda precisa ser validada pelos workflows e endpoints.
 
 ### Marco 3 — Sistema operacional MVP
 - requisições e inventário ativos
