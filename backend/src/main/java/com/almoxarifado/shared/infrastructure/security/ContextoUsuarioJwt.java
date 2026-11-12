@@ -11,8 +11,10 @@ import com.almoxarifado.shared.application.ContextoUsuario;
 public class ContextoUsuarioJwt implements ContextoUsuario {
     public java.util.Set<UUID> almoxarifadosPermitidos() {
         if(possuiPerfil("ADMIN_PLATAFORMA") || possuiPerfil("ADMIN_ORGANIZACAO")) return null;
+        Object restrito=autenticacao().getToken().getClaims().get("escopo_restrito");
+        if(restrito!=null && !(restrito instanceof Boolean)) throw new AccessDeniedException("Indicador de escopo invalido");
         Object valor=autenticacao().getToken().getClaims().get("almoxarifados");
-        if(valor==null) return null;
+        if(valor==null) return Boolean.TRUE.equals(restrito)?java.util.Set.of():null;
         if(!(valor instanceof java.util.Collection<?> lista) || lista.size()>1000)
             throw new AccessDeniedException("Escopo de almoxarifados invalido");
         var ids=new java.util.HashSet<UUID>();

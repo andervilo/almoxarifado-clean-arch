@@ -11,6 +11,11 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 class EscopoAlmoxarifadoIntegrationTest extends SuporteOperacional {
+ @Test void indicadorRestritoSemListaNegaTodosOsAlmoxarifados() throws Exception {
+  var c=cenario("NENHUM");
+  mvc.perform(get("/api/v1/almoxarifados").with(jwt().jwt(j->j.claim("organizacao_id",c.org().toString()).claim("escopo_restrito",true)).authorities(new SimpleGrantedAuthority("ROLE_ALMOXARIFE"))))
+   .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+ }
  private RequestPostProcessor escopo(UUID org,List<String> ids) {
   return jwt().jwt(j->j.subject("almoxarife").claim("organizacao_id",org.toString()).claim("almoxarifados",ids))
    .authorities(new SimpleGrantedAuthority("ROLE_ALMOXARIFE"));

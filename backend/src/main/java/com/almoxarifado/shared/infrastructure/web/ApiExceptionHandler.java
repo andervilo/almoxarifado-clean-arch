@@ -32,6 +32,10 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
     private static final String TYPE_BASE = "https://almoxarifado.local/erros/";
+    @ExceptionHandler(com.almoxarifado.shared.domain.IntegracaoIndisponivelException.class)
+    public ProblemDetail handleIntegracaoIndisponivel(com.almoxarifado.shared.domain.IntegracaoIndisponivelException ex) {
+        return problema(HttpStatus.SERVICE_UNAVAILABLE,"Integracao indisponivel",ex.getMessage(),"INTEGRACAO_INDISPONIVEL");
+    }
 
     @ExceptionHandler(RegraNegocioException.class)
     public ProblemDetail handleRegraNegocio(RegraNegocioException ex) {
