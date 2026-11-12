@@ -1,35 +1,93 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: almoxarifado-postgres:local
+    build:
+      context: ./docker/postgres
     container_name: almox-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: almoxarifado
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
       - "6432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d almoxarifado"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # O entrypoint do PostgreSQL não executa init scripts em volumes já existentes.
+  postgres-init:
+    image: almoxarifado-postgres:local
+    pull_policy: never
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGDATABASE: postgres
+      PGUSER: ${DB_USERNAME:-postgres}
+      PGPASSWORD: ${DB_PASSWORD:-postgres}
+    entrypoint: ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/docker-entrypoint-initdb.d/01-create-keycloak-db.sql"]
 
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0
+    image: almoxarifado-keycloak:local
+    build:
+      context: ./docker/keycloak
     container_name: almox-keycloak
-    command: start-dev
+    command: start-dev --import-realm
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres-init:
+        condition: service_completed_successfully
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/almoxarifado
-      KC_DB_USERNAME: postgres
-      KC_DB_PASSWORD: postgres
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: ${DB_USERNAME:-postgres}
+      KC_DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KC_HTTP_PORT: 8080
-      KC_HOSTNAME_STRICT: false
+      # URL pública fixa: o claim "iss" dos tokens é sempre http://localhost:8181/...
+      # mesmo quando o backend busca as chaves pela rede interna (keycloak:8080).
+      KC_HOSTNAME_URL: http://localhost:8181
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "false"
+      KC_HEALTH_ENABLED: "true"
     ports:
       - "8181:8080"
+    healthcheck:
+      # Keycloak 24 expõe health na porta HTTP e inclui bash, mas não curl/wget.
+      test: ["CMD", "bash", "-ec", "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; grep -q 'HTTP/1.1 200' <&3"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 12
+
+  app:
+    build:
+      context: ./backend
+    container_name: almox-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://postgres:5432/almoxarifado
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      KEYCLOAK_ISSUER_URI: http://localhost:8181/realms/almoxarifado
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/almoxarifado/protocol/openid-connect/certs
+      CORS_ALLOWED_ORIGINS: http://localhost:4200
+    ports:
+      - "8080:8080"
 
 volumes:
   postgres_data:
