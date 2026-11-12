@@ -19,7 +19,7 @@ A ideia é implementar primeiro o núcleo de negócio (estoque), depois expandir
 - schemas e históricos Flyway independentes por módulo, sem baseline automático;
 - fronteiras verificadas por ArchUnit e Spring Modulith;
 - testes com PostgreSQL real para migrações e publicação de eventos após commit/rollback;
-- validação do backend: `mvn clean verify` com 63 testes passando, build Angular
+- validação do backend: `mvn clean verify` com 86 testes passando, build Angular
   compilado e Compose com app/PostgreSQL/Keycloak saudáveis;
 - teste HTTP com tokens reais dos cinco perfis, claim de organização, RBAC do
   Actuator e rejeição de token inválido ou sem audience da API;
@@ -39,19 +39,20 @@ A ideia é implementar primeiro o núcleo de negócio (estoque), depois expandir
 - inventário com revisão de saldo e rejeição de ajuste sobre contagem desatualizada;
 - alertas de mínimo/validade, dispensa por revisão e dashboard;
 - teste real via Keycloak e Compose, do cadastro ao inventário e alerta.
+- limites de reposição e permissões por almoxarifado, inclusive consultas paginadas;
+- atendimento parcial idempotente, realocação atômica e liberação do restante;
+- setores/centros históricos e consumo líquido com exportação CSV;
+- inventário cego e contagem de material sem posição anterior;
+- provisionamento administrativo durável no Keycloak e reconstrução de projeções.
 
 ### Pendente
 - autenticação e telas do frontend Angular (atualmente o projeto padrão do CLI);
-- limites/permissões por almoxarifado, atendimento parcial e troca manual de reserva;
-- vínculo operacional do pedido a setor/centro de custo e relatórios correspondentes;
-- inventário cego e de materiais sem posição prévia;
-- provisionamento administrativo no Keycloak e backfill de novas projeções.
+- testes da interface e validação de ponta a ponta pela SPA.
 
 Contratos e limites atuais: [BACKEND_MVP.md](BACKEND_MVP.md).
 
 ### Próximo foco
 - integrar a interface Angular aos workflows e ao OIDC do Keycloak;
-- evoluir os recursos adicionais listados acima conforme prioridade do produto;
 - validar a experiência operacional com usuários antes de ampliar relatórios.
 
 ---
@@ -396,11 +397,11 @@ Os recursos adicionais e seus limites estão detalhados em `BACKEND_MVP.md`.
 
 1. ✅ infraestrutura + docker + db + flyway
 2. 🔄 Keycloak + autenticação (backend configurado; fluxo OIDC da SPA pendente)
-3. ✅ organização e usuários (cadastro local; contas e roles administradas no Keycloak)
+3. ✅ organização e usuários (cadastro local e provisionamento durável de contas/roles no Keycloak)
 4. ✅ catálogo + estrutura física (cadastros do MVP)
 5. ✅ estoque + regras de negócio (núcleo operacional; evoluções em BACKEND_MVP.md)
-6. ✅ requisições com reserva e entrega integral
-7. ✅ inventário de posições existentes com revisão de saldo
+6. ✅ requisições com entregas parciais, realocação de reservas e consumo por setor
+7. ✅ inventário cego, posições novas e reconciliação integral do local
 8. ✅ alertas e dashboard do backend
 9. ⏳ frontend Angular
 10. ⏳ testes finais

@@ -208,11 +208,19 @@ local/lote/série, custo médio, reserva, transferência e estorno. Os workflows
 módulos usam eventos do Modulith.
 
 Consulte [docs/BACKEND_MVP.md](docs/BACKEND_MVP.md) para rotas, regras, estados,
-testes e recursos da especificação ainda pendentes. Execute o fluxo com JWT real:
+testes e contratos. O backend também inclui entregas parciais, troca de reservas,
+consumo por setor, inventário cego, limites e permissões por almoxarifado e
+provisionamento de contas no Keycloak. O frontend operacional segue pendente.
+Execute o fluxo local com JWT real:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/validar-backend.ps1
 ```
+
+Em uma instalação existente, execute antes
+`scripts/configurar-keycloak-dev.ps1` e `scripts/reconstruir-projecoes.ps1`,
+conforme [os procedimentos do backend](docs/BACKEND_MVP.md).
+Validação atual: 86 testes backend e serviços saudáveis no Docker Compose.
 
 ---
 

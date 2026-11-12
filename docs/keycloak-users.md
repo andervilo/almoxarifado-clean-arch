@@ -52,3 +52,45 @@ realm, ajuste clients, mappers e usuários pelo console/API administrativa,
 preservando os dados. O administrador da plataforma deve cadastrar a organização
 do token por `POST /api/v1/organizacoes`. O script `scripts/validar-backend.ps1`
 faz esse cadastro inicial para a organização de demonstração, se necessário.
+
+## Administração de contas pelo backend
+
+O client confidencial `almoxarifado-admin` usa service account com as roles
+`manage-users`, `view-users` e `view-realm` de `realm-management`. Ele não recebe
+permissões de administração de clients ou do realm. O backend usa client
+credentials somente na API administrativa; as APIs públicas continuam resource
+server com validação de audience e issuer.
+
+Em instalações existentes de desenvolvimento, execute:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/configurar-keycloak-dev.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/validar-identidades.ps1
+```
+
+A configuração preserva contas existentes, adiciona service account, atributos
+protegidos e mappers. Não rotaciona segredos: se o client existir com segredo
+diferente, informe `KEYCLOAK_ADMIN_CLIENT_SECRET`. O script usa as credenciais
+administrativas locais ou `KEYCLOAK_ADMIN`/`KEYCLOAK_ADMIN_PASSWORD` do ambiente.
+
+O provisionamento fica desabilitado por padrão fora do Compose. Configure
+`KEYCLOAK_ADMIN_ENABLED=true`, `KEYCLOAK_ADMIN_BASE_URL`,
+`KEYCLOAK_ADMIN_CLIENT_ID` e `KEYCLOAK_ADMIN_CLIENT_SECRET`. No Compose local,
+ele está habilitado, com segredo de demonstração. Em produção, use segredo
+próprio e transporte HTTPS entre serviços.
+
+`organizacao_id`, `almoxarifados`, `escopo_restrito` e `provisionamento_id` são
+atributos administrativos. `almoxarifados` gera array de UUIDs no JWT;
+`escopo_restrito` é booleano e evita que uma lista vazia omitida pelo Keycloak
+seja interpretada como acesso irrestrito. Admins do tenant não são limitados
+por essa lista. Alterações encerram sessões, mas tokens existentes duram até
+expirar (cinco minutos na configuração local).
+
+Novas contas ficam sem senha e exigem `UPDATE_PASSWORD`. A administração deve
+concluir o onboarding no Keycloak; o backend não recebe senhas nem dispara
+e-mails. O script de validação define senha aleatória diretamente no provedor
+apenas para a conta que acabou de criar, testa seu JWT e termina desabilitando
+essa conta pelo backend, preservando a auditoria. Não use esse script em produção.
+
+Referências: [API administrativa Keycloak 24.0.5](https://www.keycloak.org/docs-api/24.0.5/rest-api/index.html)
+e [administração de service accounts](https://www.keycloak.org/docs/24.0.5/server_admin/index.html).
