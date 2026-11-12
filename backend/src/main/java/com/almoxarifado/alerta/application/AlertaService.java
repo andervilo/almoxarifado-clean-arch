@@ -13,11 +13,11 @@ public class AlertaService {
  public AlertaService(AlertaRepository repository,ContextoUsuario contexto,Auditoria auditoria) { this.repository=repository;this.contexto=contexto;this.auditoria=auditoria; }
  public List<Alerta> listar(int pagina,int tamanho) {
   if(pagina<0 || pagina>1000000 || tamanho<1 || tamanho>100) throw new IllegalArgumentException("Paginacao invalida");
-  return repository.listar(contexto.organizacaoId(),tamanho,pagina*tamanho);
+  return repository.listar(contexto.organizacaoId(),tamanho,pagina*tamanho,contexto.almoxarifadosPermitidos());
  }
- public Map<String,Object> dashboard() { return repository.dashboard(contexto.organizacaoId()); }
+ public Map<String,Object> dashboard() { return repository.dashboard(contexto.organizacaoId(),contexto.almoxarifadosPermitidos()); }
  @Transactional public void dispensar(String chave,String revisao) {
-  var org=contexto.organizacaoId();repository.buscar(org,chave,revisao).orElseThrow(()->new RecursoNaoEncontradoException("Alerta inexistente, desatualizado ou ja dispensado"));
+  var org=contexto.organizacaoId();repository.buscar(org,chave,revisao,contexto.almoxarifadosPermitidos()).orElseThrow(()->new RecursoNaoEncontradoException("Alerta inexistente, desatualizado ou ja dispensado"));
   repository.dispensar(org,chave,revisao,contexto.usuarioId());auditoria.registrar(org,contexto.usuarioId(),"ALERTA_DISPENSADO",chave);
  }
 }

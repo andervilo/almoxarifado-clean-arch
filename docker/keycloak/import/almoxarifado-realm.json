@@ -11,15 +11,33 @@
   "ssoSessionIdleTimeout": 1800,
   "ssoSessionMaxLifespan": 36000,
   "internationalizationEnabled": true,
-  "supportedLocales": ["pt-BR", "en"],
+  "supportedLocales": [
+    "pt-BR",
+    "en"
+  ],
   "defaultLocale": "pt-BR",
   "roles": {
     "realm": [
-      { "name": "ADMIN_PLATAFORMA", "description": "Administrador global da plataforma" },
-      { "name": "ADMIN_ORGANIZACAO", "description": "Administrador da organização" },
-      { "name": "ALMOXARIFE", "description": "Operação de estoque, requisições e inventário" },
-      { "name": "REQUISITANTE", "description": "Solicita materiais" },
-      { "name": "GESTOR", "description": "Acompanhamento executivo, relatórios e alertas" }
+      {
+        "name": "ADMIN_PLATAFORMA",
+        "description": "Administrador global da plataforma"
+      },
+      {
+        "name": "ADMIN_ORGANIZACAO",
+        "description": "Administrador da organização"
+      },
+      {
+        "name": "ALMOXARIFE",
+        "description": "Operação de estoque, requisições e inventário"
+      },
+      {
+        "name": "REQUISITANTE",
+        "description": "Solicita materiais"
+      },
+      {
+        "name": "GESTOR",
+        "description": "Acompanhamento executivo, relatórios e alertas"
+      }
     ]
   },
   "components": {
@@ -29,7 +47,7 @@
         "subComponents": {},
         "config": {
           "kc.user.profile.config": [
-            "{\"unmanagedAttributePolicy\":\"ADMIN_VIEW\",\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"organizacao_id\",\"displayName\":\"Organização (UUID)\",\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
+            "{\"unmanagedAttributePolicy\":\"ADMIN_VIEW\",\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"organizacao_id\",\"displayName\":\"Organização (UUID)\",\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"almoxarifados\",\"displayName\":\"Almoxarifados autorizados (UUIDs)\",\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"multivalued\":true}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
           ]
         }
       }
@@ -57,8 +75,12 @@
       "serviceAccountsEnabled": false,
       "rootUrl": "http://localhost:4200",
       "baseUrl": "/",
-      "redirectUris": ["http://localhost:4200/*"],
-      "webOrigins": ["http://localhost:4200"],
+      "redirectUris": [
+        "http://localhost:4200/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200"
+      ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "http://localhost:4200/*"
@@ -89,6 +111,21 @@
             "userinfo.token.claim": "true",
             "multivalued": "false"
           }
+        },
+        {
+          "name": "almoxarifados",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "almoxarifados",
+            "claim.name": "almoxarifados",
+            "jsonType.label": "String",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "multivalued": "true"
+          }
         }
       ]
     }
@@ -101,9 +138,21 @@
       "firstName": "Admin",
       "lastName": "Plataforma",
       "email": "admin.plataforma@almoxarifado.local",
-      "attributes": { "organizacao_id": ["0190f5a0-0000-7000-8000-000000000001"] },
-      "credentials": [{ "type": "password", "value": "Admin@123", "temporary": false }],
-      "realmRoles": ["ADMIN_PLATAFORMA"]
+      "attributes": {
+        "organizacao_id": [
+          "0190f5a0-0000-7000-8000-000000000001"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN_PLATAFORMA"
+      ]
     },
     {
       "username": "admin.organizacao",
@@ -112,9 +161,21 @@
       "firstName": "Admin",
       "lastName": "Organização",
       "email": "admin.organizacao@almoxarifado.local",
-      "attributes": { "organizacao_id": ["0190f5a0-0000-7000-8000-000000000001"] },
-      "credentials": [{ "type": "password", "value": "OrgAdmin@123", "temporary": false }],
-      "realmRoles": ["ADMIN_ORGANIZACAO"]
+      "attributes": {
+        "organizacao_id": [
+          "0190f5a0-0000-7000-8000-000000000001"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "OrgAdmin@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN_ORGANIZACAO"
+      ]
     },
     {
       "username": "almoxarife",
@@ -123,9 +184,21 @@
       "firstName": "Alberto",
       "lastName": "Almoxarife",
       "email": "almoxarife@almoxarifado.local",
-      "attributes": { "organizacao_id": ["0190f5a0-0000-7000-8000-000000000001"] },
-      "credentials": [{ "type": "password", "value": "Almoxarife@123", "temporary": false }],
-      "realmRoles": ["ALMOXARIFE"]
+      "attributes": {
+        "organizacao_id": [
+          "0190f5a0-0000-7000-8000-000000000001"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Almoxarife@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ALMOXARIFE"
+      ]
     },
     {
       "username": "requisitante",
@@ -134,9 +207,21 @@
       "firstName": "Rita",
       "lastName": "Requisitante",
       "email": "requisitante@almoxarifado.local",
-      "attributes": { "organizacao_id": ["0190f5a0-0000-7000-8000-000000000001"] },
-      "credentials": [{ "type": "password", "value": "Requisitante@123", "temporary": false }],
-      "realmRoles": ["REQUISITANTE"]
+      "attributes": {
+        "organizacao_id": [
+          "0190f5a0-0000-7000-8000-000000000001"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Requisitante@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "REQUISITANTE"
+      ]
     },
     {
       "username": "gestor",
@@ -145,9 +230,21 @@
       "firstName": "Gustavo",
       "lastName": "Gestor",
       "email": "gestor@almoxarifado.local",
-      "attributes": { "organizacao_id": ["0190f5a0-0000-7000-8000-000000000001"] },
-      "credentials": [{ "type": "password", "value": "Gestor@123", "temporary": false }],
-      "realmRoles": ["GESTOR"]
+      "attributes": {
+        "organizacao_id": [
+          "0190f5a0-0000-7000-8000-000000000001"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Gestor@123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "GESTOR"
+      ]
     }
   ]
 }

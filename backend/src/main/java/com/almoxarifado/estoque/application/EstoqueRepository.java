@@ -14,7 +14,7 @@ public interface EstoqueRepository {
  Optional<String> assinatura(UUID org,UUID operacao);
  void operacao(UUID org,UUID operacao,ComandoEstoque comando,String usuario,List<Linha> linhas);
  List<Linha> linhas(UUID org,UUID operacao);
- List<Map<String,Object>> historico(UUID org,UUID item,int limite,int deslocamento);
+ List<Map<String,Object>> historico(UUID org,UUID item,int limite,int deslocamento,Set<UUID> escopo);
  List<Reserva> reservas(UUID org,UUID requisicao);
  void reservar(UUID org,UUID requisicao,UUID posicao,BigDecimal quantidade);
  void concluirReserva(UUID org,UUID requisicao,String status);
@@ -25,6 +25,7 @@ public interface EstoqueRepository {
  long revisao(UUID org,UUID posicao);
  boolean processado(UUID org,UUID evento);
  void concluirProcessamento(UUID org,UUID evento);
- List<Map<String,Object>> rastrear(UUID org,UUID item,String lote,String serie,int limite,int deslocamento);
- List<Map<String,Object>> custos(UUID org,UUID item);
+ List<Map<String,Object>> rastrear(UUID org,UUID item,String lote,String serie,int limite,int deslocamento,Set<UUID> escopo);
+ List<Map<String,Object>> custos(UUID org,UUID item,Set<UUID> escopo);
+ UUID almoxarifadoDoLocal(UUID org,UUID local);
 }

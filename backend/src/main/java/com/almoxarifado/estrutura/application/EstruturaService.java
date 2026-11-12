@@ -28,16 +28,19 @@ public class EstruturaService {
   if(pagina<0 || pagina>1000000 || tamanho<1 || tamanho>100) throw new IllegalArgumentException("Paginacao invalida");
  }
  public Almoxarifado buscarAlmoxarifado(UUID id) {
+  contexto.exigirAlmoxarifado(id);
   return repository.almoxarifado(organizacaoId(),id).orElseThrow(()->new RecursoNaoEncontradoException("Almoxarifado nao encontrado"));
  }
  public LocalArmazenamento buscarLocal(UUID id) {
-  return repository.local(organizacaoId(),id).orElseThrow(()->new RecursoNaoEncontradoException("Local nao encontrado"));
+  var local=repository.local(organizacaoId(),id).orElseThrow(()->new RecursoNaoEncontradoException("Local nao encontrado"));
+  contexto.exigirAlmoxarifado(local.almoxarifadoId());return local;
  }
- public List<Almoxarifado> almoxarifados(int pagina,int tamanho) { pagina(pagina,tamanho); return repository.almoxarifados(organizacaoId(),tamanho,pagina*tamanho); }
+ public List<Almoxarifado> almoxarifados(int pagina,int tamanho) { pagina(pagina,tamanho); return repository.almoxarifados(organizacaoId(),tamanho,pagina*tamanho,contexto.almoxarifadosPermitidos()); }
  public List<LocalArmazenamento> locais(UUID almox,int pagina,int tamanho) { pagina(pagina,tamanho); buscarAlmoxarifado(almox); return repository.locais(organizacaoId(),almox,tamanho,pagina*tamanho); }
  @Transactional
  @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
  public Almoxarifado salvarAlmoxarifado(UUID id,boolean atualizar,String codigo,String nome,boolean ativo) {
+  contexto.exigirAlmoxarifado(id);
   var org=organizacaoId(); if(atualizar) buscarAlmoxarifado(id);
   var valor=new Almoxarifado(id,org,codigo,nome,ativo);
   repository.salvar(valor);

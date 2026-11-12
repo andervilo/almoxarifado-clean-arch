@@ -24,5 +24,11 @@ public class InventarioJdbc implements InventarioRepository {
  }
  public void contar(UUID org,UUID inv,Contagem c) { jdbc.update("UPDATE inventario.contagens SET contada=? WHERE organizacao_id=? AND inventario_id=? AND posicao_id=?",c.contada(),org,inv,c.posicaoId()); }
  public void estado(UUID org,UUID id,String status,UUID comando,String erro) { jdbc.update("UPDATE inventario.inventarios SET status=?,comando_id=?,erro=? WHERE organizacao_id=? AND id=?",status,comando,erro,org,id); }
- public List<UUID> listar(UUID org,int limite,int deslocamento) { return jdbc.query("SELECT id FROM inventario.inventarios WHERE organizacao_id=? ORDER BY criado_em DESC,id LIMIT ? OFFSET ?",(rs,n)->rs.getObject(1,UUID.class),org,limite,deslocamento); }
+ public List<UUID> listar(UUID org,int limite,int deslocamento,Set<UUID> escopo) {
+  String ids=com.almoxarifado.shared.infrastructure.persistence.FiltroEscopoSql.array(escopo);
+  return jdbc.query("SELECT i.id FROM inventario.inventarios i LEFT JOIN inventario.locais_projecao l ON l.organizacao_id=i.organizacao_id AND l.id=i.local_id WHERE i.organizacao_id=? AND (?::uuid[] IS NULL OR l.almoxarifado_id=ANY(?::uuid[])) ORDER BY i.criado_em DESC,i.id LIMIT ? OFFSET ?",(rs,n)->rs.getObject(1,UUID.class),org,ids,ids,limite,deslocamento);
+ }
+ public UUID almoxarifadoDoLocal(UUID org,UUID local) {
+  return jdbc.query("SELECT almoxarifado_id FROM inventario.locais_projecao WHERE organizacao_id=? AND id=?",(rs,n)->rs.getObject(1,UUID.class),org,local).stream().findFirst().orElse(null);
+ }
 }

@@ -19,20 +19,23 @@ public class RequisicaoService {
  private Requisicao buscar(UUID id,boolean lock) {
   var r=repository.buscar(contexto.organizacaoId(),id,lock).orElseThrow(()->new RecursoNaoEncontradoException("Requisicao nao encontrada"));
   if(restrito() && !r.solicitanteId().equals(contexto.usuarioId())) throw new RecursoNaoEncontradoException("Requisicao nao encontrada");
+  exigirLocal(r.localId());
   return r;
  }
  public Requisicao buscar(UUID id) { return buscar(id,false); }
  public List<Requisicao> listar(int pagina,int tamanho) {
   if(pagina<0 || pagina>1000000 || tamanho<1 || tamanho>100) throw new IllegalArgumentException("Paginacao invalida");
-  return repository.listar(contexto.organizacaoId(),restrito()?contexto.usuarioId():null,tamanho,pagina*tamanho);
+  return repository.listar(contexto.organizacaoId(),restrito()?contexto.usuarioId():null,tamanho,pagina*tamanho,contexto.almoxarifadosPermitidos());
  }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE','REQUISITANTE')")
  public Requisicao criar(UUID local,List<Requisicao.Linha> linhas) {
+  exigirLocal(local);
   var r=new Requisicao(UUID.randomUUID(),contexto.organizacaoId(),contexto.usuarioId(),local,linhas,"RASCUNHO",null,null);
   repository.criar(r);auditoria.registrar(r.organizacaoId(),contexto.usuarioId(),"REQUISICAO_CRIADA",r.id().toString());return r;
  }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE','REQUISITANTE')")
  public Requisicao editar(UUID id,UUID local,List<Requisicao.Linha> linhas) {
+  exigirLocal(local);
   var r=buscar(id,true);
   r.transicionar(r.status(),null,null,"RASCUNHO","FALHA_RESERVA");
   var novo=new Requisicao(id,r.organizacaoId(),r.solicitanteId(),local,linhas,r.status(),null,null);
@@ -62,4 +65,7 @@ public class RequisicaoService {
   return novo;
  }
  private Requisicao salvar(Requisicao r) { repository.atualizar(r);auditoria.registrar(r.organizacaoId(),contexto.usuarioId(),"REQUISICAO_"+r.status(),r.id().toString());return r; }
+ private void exigirLocal(UUID local) {
+  if(contexto.almoxarifadosPermitidos()!=null) contexto.exigirAlmoxarifado(repository.almoxarifadoDoLocal(contexto.organizacaoId(),local));
+ }
 }

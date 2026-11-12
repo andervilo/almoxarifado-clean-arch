@@ -13,14 +13,21 @@ import com.almoxarifado.shared.domain.*;
 public class InventarioService {
  private final InventarioRepository repository;private final ContextoUsuario contexto;private final Auditoria auditoria;private final PublicadorEventos eventos;
  public InventarioService(InventarioRepository repository,ContextoUsuario contexto,Auditoria auditoria,PublicadorEventos eventos) { this.repository=repository;this.contexto=contexto;this.auditoria=auditoria;this.eventos=eventos; }
- private InventarioRepository.Inventario buscar(UUID id,boolean lock) { return repository.buscar(contexto.organizacaoId(),id,lock).orElseThrow(()->new RecursoNaoEncontradoException("Inventario nao encontrado")); }
+ private InventarioRepository.Inventario buscar(UUID id,boolean lock) {
+  var inv=repository.buscar(contexto.organizacaoId(),id,lock).orElseThrow(()->new RecursoNaoEncontradoException("Inventario nao encontrado"));
+  exigirLocal(inv.localId());return inv;
+ }
+ private void exigirLocal(UUID local) {
+  if(contexto.almoxarifadosPermitidos()!=null) contexto.exigirAlmoxarifado(repository.almoxarifadoDoLocal(contexto.organizacaoId(),local));
+ }
  public InventarioRepository.Inventario buscar(UUID id) { return buscar(id,false); }
  public List<InventarioRepository.Inventario> listar(int pagina,int tamanho) {
   if(pagina<0 || pagina>1000000 || tamanho<1 || tamanho>100) throw new IllegalArgumentException("Paginacao invalida");
-  return repository.listar(contexto.organizacaoId(),tamanho,pagina*tamanho).stream().map(this::buscar).toList();
+  return repository.listar(contexto.organizacaoId(),tamanho,pagina*tamanho,contexto.almoxarifadosPermitidos()).stream().map(this::buscar).toList();
  }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
  public InventarioRepository.Inventario criar(UUID local) {
+  exigirLocal(local);
   var org=contexto.organizacaoId();var snapshot=repository.snapshot(org,local);
   if(snapshot.isEmpty()) throw new RegraNegocioException("SALDO_NAO_SINCRONIZADO","Local sem posicoes de estoque sincronizadas");
   var id=UUID.randomUUID();repository.criar(org,id,local,snapshot);auditoria.registrar(org,contexto.usuarioId(),"INVENTARIO_CRIADO",id.toString());return buscar(id);

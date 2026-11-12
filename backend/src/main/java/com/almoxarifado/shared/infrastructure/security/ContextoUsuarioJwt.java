@@ -9,6 +9,23 @@ import com.almoxarifado.shared.application.ContextoUsuario;
 
 @Component
 public class ContextoUsuarioJwt implements ContextoUsuario {
+    public java.util.Set<UUID> almoxarifadosPermitidos() {
+        if(possuiPerfil("ADMIN_PLATAFORMA") || possuiPerfil("ADMIN_ORGANIZACAO")) return null;
+        Object valor=autenticacao().getToken().getClaims().get("almoxarifados");
+        if(valor==null) return null;
+        if(!(valor instanceof java.util.Collection<?> lista) || lista.size()>1000)
+            throw new AccessDeniedException("Escopo de almoxarifados invalido");
+        var ids=new java.util.HashSet<UUID>();
+        try {
+            for(var item:lista) {
+                if(!(item instanceof String texto)) throw new IllegalArgumentException();
+                var id=UUID.fromString(texto);
+                if(!id.toString().equalsIgnoreCase(texto)) throw new IllegalArgumentException();
+                ids.add(id);
+            }
+        } catch(IllegalArgumentException ex) { throw new AccessDeniedException("Escopo de almoxarifados invalido"); }
+        return java.util.Set.copyOf(ids);
+    }
     private JwtAuthenticationToken autenticacao() {
         var autenticacao = SecurityContextHolder.getContext().getAuthentication();
         if (!(autenticacao instanceof JwtAuthenticationToken jwt) || !jwt.isAuthenticated()) {

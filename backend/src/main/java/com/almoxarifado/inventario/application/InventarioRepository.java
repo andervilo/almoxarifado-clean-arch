@@ -8,5 +8,6 @@ public interface InventarioRepository {
  Optional<Inventario> buscar(UUID org,UUID id,boolean bloquear);
  void contar(UUID org,UUID inventario,Contagem contagem);
  void estado(UUID org,UUID id,String status,UUID comando,String erro);
- List<UUID> listar(UUID org,int limite,int deslocamento);
+ List<UUID> listar(UUID org,int limite,int deslocamento,Set<UUID> escopo);
+ UUID almoxarifadoDoLocal(UUID org,UUID local);
 }
