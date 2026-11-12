@@ -18,6 +18,7 @@ public interface EstoqueRepository {
  List<Reserva> reservas(UUID org,UUID requisicao,UUID item);
  void reservar(UUID org,UUID requisicao,UUID posicao,BigDecimal quantidade);
  void concluirReserva(UUID org,UUID requisicao,UUID item,String status);
+ void consumirReserva(UUID org,UUID requisicao,UUID posicao,java.math.BigDecimal restante);
  BigDecimal custo(UUID org,UUID item,UUID almoxarifado);
  BigDecimal ajustarCusto(UUID org,UUID item,UUID almoxarifado,BigDecimal delta,BigDecimal valorEntrada);
  void marcarEstorno(UUID org,UUID original,UUID estorno);

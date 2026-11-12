@@ -88,15 +88,22 @@ public class MotorEstoque {
                 if(comando.referenciaId()==null) throw new IllegalArgumentException("Referencia obrigatoria");
                 var reservas=repository.reservas(org,comando.referenciaId(),comando.itemId());
                 if(reservas.isEmpty()) throw erro("RESERVA_INEXISTENTE","Reserva ativa nao encontrada");
+                var restante=tipo.equals("ENTREGA")?comando.quantidade():reservas.stream().map(EstoqueRepository.Reserva::quantidade).reduce(BigDecimal.ZERO,BigDecimal::add);
+                var totalReservado=reservas.stream().map(EstoqueRepository.Reserva::quantidade).reduce(BigDecimal.ZERO,BigDecimal::add);
+                if(restante==null || restante.signum()<=0 || restante.compareTo(totalReservado)>0) throw erro("ENTREGA_INVALIDA","Entrega excede a reserva restante");
                 for(var r:reservas) {
+                    if(restante.signum()==0) break;
+                    var quantidade=restante.min(r.quantidade());
                     var p=posicoes.stream().filter(v->v.id().equals(r.posicaoId())).findFirst().orElseThrow(()->erro("RESERVA_INVALIDA","Reserva de outro item"));
-                    var novo=p.alterar(BigDecimal.ZERO,r.quantidade().negate(),p.custo());
+                    var novo=p.alterar(BigDecimal.ZERO,quantidade.negate(),p.custo());
                     if(tipo.equals("ENTREGA")) {
                         p.validarSaida(LocalDate.now(ZoneOffset.UTC));
-                        retirar(org,novo,r.quantidade(),alteradas,linhas);
+                        retirar(org,novo,quantidade,alteradas,linhas);
+                        repository.consumirReserva(org,comando.referenciaId(),p.id(),r.quantidade().subtract(quantidade));
                     } else salvar(novo,alteradas);
+                    restante=restante.subtract(quantidade);
                 }
-                repository.concluirReserva(org,comando.referenciaId(),comando.itemId(),tipo.equals("ENTREGA")?"CONSUMIDA":"LIBERADA");
+                if(tipo.equals("LIBERACAO")) repository.concluirReserva(org,comando.referenciaId(),comando.itemId(),"LIBERADA");
             }
             case "ESTORNO" -> {
                 if(comando.referenciaId()==null) throw new IllegalArgumentException("Referencia obrigatoria");

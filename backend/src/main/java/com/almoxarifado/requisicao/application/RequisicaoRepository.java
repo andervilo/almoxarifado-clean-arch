@@ -8,4 +8,10 @@ public interface RequisicaoRepository {
  void atualizar(Requisicao requisicao);
  void editar(Requisicao requisicao);
  UUID almoxarifadoDoLocal(UUID org,UUID local);
+ void prepararEntrega(UUID org,UUID requisicao,UUID comando,List<Requisicao.Linha> linhas);
+ void aplicarEntrega(UUID org,UUID requisicao,UUID comando);
+ record ChaveEntrega(UUID requisicaoId,String assinatura,UUID comandoId) {}
+ void bloquearChaveEntrega(UUID org,UUID chave);
+ Optional<ChaveEntrega> chaveEntrega(UUID org,UUID chave);
+ void registrarChaveEntrega(UUID org,UUID chave,UUID requisicao,String assinatura,UUID comando);
 }

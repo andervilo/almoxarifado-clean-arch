@@ -13,9 +13,14 @@ public class RequisicaoController {
  public RequisicaoController(RequisicaoService service) { this.service=service; }
  public record LinhaRequest(@NotNull UUID itemId,@NotNull @Positive @Digits(integer=15,fraction=4) BigDecimal quantidade) {}
  public record CriarRequest(@NotNull UUID localId,@NotEmpty @Size(max=100) List<@Valid LinhaRequest> linhas) {}
- public record LinhaResponse(UUID itemId,BigDecimal quantidade) {}
+ public record LinhaResponse(UUID itemId,BigDecimal quantidade,BigDecimal atendida,BigDecimal pendente) {}
+ public record EntregaRequest(@NotEmpty @Size(max=100) List<@Valid LinhaRequest> linhas) {}
  public record Response(UUID id,UUID localId,String solicitanteId,String status,String erro,List<LinhaResponse> linhas) {}
- private Response resposta(Requisicao r) { return new Response(r.id(),r.localId(),r.solicitanteId(),r.status(),r.erro(),r.linhas().stream().map(l->new LinhaResponse(l.itemId(),l.quantidade())).toList()); }
+ private Response resposta(Requisicao r) { return new Response(r.id(),r.localId(),r.solicitanteId(),r.status(),r.erro(),r.linhas().stream().map(l->new LinhaResponse(l.itemId(),l.quantidade(),l.atendida(),l.pendente())).toList()); }
+ @PostMapping("/{id}/entregar") @ResponseStatus(HttpStatus.ACCEPTED)
+ public Response entregar(@PathVariable UUID id,@RequestHeader(value="Idempotency-Key",required=false) UUID chave,@Valid @RequestBody(required=false) EntregaRequest req) {
+  return resposta(service.entregar(id,req==null?null:req.linhas().stream().map(l->new Requisicao.Linha(l.itemId(),l.quantidade())).toList(),chave));
+ }
  @PostMapping @ResponseStatus(HttpStatus.CREATED) public Response criar(@Valid @RequestBody CriarRequest req) { return resposta(service.criar(req.localId(),req.linhas().stream().map(l->new Requisicao.Linha(l.itemId(),l.quantidade())).toList())); }
  @GetMapping("/{id}") public Response buscar(@PathVariable UUID id) { return resposta(service.buscar(id)); }
  @PutMapping("/{id}") public Response editar(@PathVariable UUID id,@Valid @RequestBody CriarRequest req) {

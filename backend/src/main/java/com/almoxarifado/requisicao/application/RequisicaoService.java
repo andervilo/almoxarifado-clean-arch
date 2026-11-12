@@ -46,7 +46,33 @@ public class RequisicaoService {
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
  public Requisicao separar(UUID id) { return salvar(buscar(id,true).transicionar("SEPARADA",null,null,"RESERVADA")); }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
- public Requisicao entregar(UUID id) { return solicitar(buscar(id,true),"ENTREGA","ENTREGANDO","SEPARADA"); }
+ public Requisicao entregar(UUID id) { return entregar(id,null); }
+ @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
+ public Requisicao entregar(UUID id,List<Requisicao.Linha> selecionadas) { return entregar(id,selecionadas,null); }
+ @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
+ public Requisicao entregar(UUID id,List<Requisicao.Linha> selecionadas,UUID chave) {
+  var r=buscar(id,true);
+  if(selecionadas!=null && chave==null) throw new IllegalArgumentException("Entrega parcial exige Idempotency-Key");
+  String assinatura=selecionadas==null?"INTEGRAL":selecionadas.stream().sorted(Comparator.comparing(Requisicao.Linha::itemId))
+   .map(l->l.itemId()+":"+l.quantidade().stripTrailingZeros().toPlainString()).collect(java.util.stream.Collectors.joining(";"));
+  if(chave!=null) {
+   repository.bloquearChaveEntrega(r.organizacaoId(),chave);var anterior=repository.chaveEntrega(r.organizacaoId(),chave);
+   if(anterior.isPresent()) {
+    if(!anterior.get().requisicaoId().equals(id) || !anterior.get().assinatura().equals(assinatura)) throw new com.almoxarifado.shared.domain.RegraNegocioException("IDEMPOTENCIA_CONFLITO","Chave reutilizada com outro pedido ou conteudo");
+    return r;
+   }
+  }
+  r.exigirEstado("SEPARADA","PARCIALMENTE_ENTREGUE");
+  if(selecionadas==null) selecionadas=r.linhas().stream().filter(l->l.pendente().signum()>0).map(l->new Requisicao.Linha(l.itemId(),l.pendente())).toList();
+  if(selecionadas.isEmpty() || selecionadas.size()>100 || selecionadas.stream().map(Requisicao.Linha::itemId).distinct().count()!=selecionadas.size())
+   throw new IllegalArgumentException("Selecione itens distintos para entrega");
+  for(var linha:selecionadas) r.linhas().stream().filter(l->l.itemId().equals(linha.itemId())).findFirst()
+   .orElseThrow(()->new RecursoNaoEncontradoException("Item fora da requisicao")).entregar(linha.quantidade());
+  var comando=UUID.randomUUID();var novo=r.transicionar("ENTREGANDO",comando,null,"SEPARADA","PARCIALMENTE_ENTREGUE");
+  if(chave!=null) repository.registrarChaveEntrega(r.organizacaoId(),chave,id,assinatura,comando);
+  repository.prepararEntrega(r.organizacaoId(),id,comando,selecionadas);salvar(novo);
+  eventos.publicar(new OperacaoRequisicaoSolicitada(comando,Instant.now(),r.organizacaoId(),2,id,contexto.usuarioId(),"ENTREGA",r.localId(),selecionadas.stream().map(l->new OperacaoRequisicaoSolicitada.Linha(l.itemId(),l.quantidade())).toList()));return novo;
+ }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE','REQUISITANTE')")
  public Requisicao confirmar(UUID id) {
   var r=buscar(id,true);
@@ -57,11 +83,11 @@ public class RequisicaoService {
  public Requisicao cancelar(UUID id) {
   var r=buscar(id,true);
   if(Set.of("RASCUNHO","FALHA_RESERVA").contains(r.status())) return salvar(r.transicionar("CANCELADA",null,null,"RASCUNHO","FALHA_RESERVA"));
-  return solicitar(r,"LIBERACAO","CANCELANDO","RESERVADA","SEPARADA");
+  return solicitar(r,"LIBERACAO","CANCELANDO","RESERVADA","SEPARADA","PARCIALMENTE_ENTREGUE");
  }
  private Requisicao solicitar(Requisicao r,String tipo,String estado,String... permitidos) {
   var comando=UUID.randomUUID();var novo=r.transicionar(estado,comando,null,permitidos);
-  salvar(novo);eventos.publicar(new OperacaoRequisicaoSolicitada(comando,Instant.now(),r.organizacaoId(),1,r.id(),contexto.usuarioId(),tipo,r.localId(),r.linhas().stream().map(l->new OperacaoRequisicaoSolicitada.Linha(l.itemId(),l.quantidade())).toList()));
+  salvar(novo);eventos.publicar(new OperacaoRequisicaoSolicitada(comando,Instant.now(),r.organizacaoId(),2,r.id(),contexto.usuarioId(),tipo,r.localId(),r.linhas().stream().filter(l->l.pendente().signum()>0).map(l->new OperacaoRequisicaoSolicitada.Linha(l.itemId(),l.pendente())).toList()));
   return novo;
  }
  private Requisicao salvar(Requisicao r) { repository.atualizar(r);auditoria.registrar(r.organizacaoId(),contexto.usuarioId(),"REQUISICAO_"+r.status(),r.id().toString());return r; }

@@ -77,6 +77,12 @@ public class EstoqueJdbc implements EstoqueRepository {
    AND EXISTS(SELECT 1 FROM estoque.posicoes p WHERE p.organizacao_id=r.organizacao_id AND p.id=r.posicao_id AND p.item_id=?)
    """,status,org,req,item);
  }
+ public void consumirReserva(UUID org,UUID req,UUID pos,BigDecimal restante) {
+  jdbc.update("""
+   UPDATE estoque.reservas SET quantidade=CASE WHEN ?=0 THEN quantidade ELSE ? END,status=CASE WHEN ?=0 THEN 'CONSUMIDA' ELSE 'ATIVA' END
+   WHERE organizacao_id=? AND requisicao_id=? AND posicao_id=? AND status='ATIVA'
+   """,restante,restante,restante,org,req,pos);
+ }
  public BigDecimal custo(UUID org,UUID item,UUID almox) {
   return jdbc.query("SELECT custo FROM estoque.custos WHERE organizacao_id=? AND item_id=? AND almoxarifado_id=?",(rs,n)->rs.getBigDecimal(1),org,item,almox).stream().findFirst().orElse(BigDecimal.ZERO);
  }

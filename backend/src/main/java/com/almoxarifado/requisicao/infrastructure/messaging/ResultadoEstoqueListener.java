@@ -11,10 +11,14 @@ public class ResultadoEstoqueListener {
  @ApplicationModuleListener public void receber(OperacaoRequisicaoConcluida e) {
   var r=repository.buscar(e.organizacaoId(),e.requisicaoId(),true).orElseThrow();
   if(!e.comandoId().equals(r.comandoId())) return;
+  if(r.status().equals("ENTREGANDO") && e.sucesso()) {
+   repository.aplicarEntrega(e.organizacaoId(),r.id(),e.comandoId());
+   r=repository.buscar(e.organizacaoId(),r.id(),true).orElseThrow();
+  }
   String estado=switch(r.status()) {
    case "RESERVANDO" -> e.sucesso()?"RESERVADA":"FALHA_RESERVA";
-   case "ENTREGANDO" -> e.sucesso()?"ENTREGUE":"SEPARADA";
-   case "CANCELANDO" -> e.sucesso()?"CANCELADA":"RESERVADA";
+   case "ENTREGANDO" -> e.sucesso()?(r.linhas().stream().allMatch(l->l.pendente().signum()==0)?"ENTREGUE":"PARCIALMENTE_ENTREGUE"):(r.estadoAnterior()==null?"SEPARADA":r.estadoAnterior());
+   case "CANCELANDO" -> e.sucesso()?"CANCELADA":(r.estadoAnterior()==null?"RESERVADA":r.estadoAnterior());
    default -> null;
   };
   if(estado==null) return;
