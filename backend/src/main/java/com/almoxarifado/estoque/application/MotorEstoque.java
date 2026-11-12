@@ -86,7 +86,7 @@ public class MotorEstoque {
             }
             case "LIBERACAO","ENTREGA" -> {
                 if(comando.referenciaId()==null) throw new IllegalArgumentException("Referencia obrigatoria");
-                var reservas=repository.reservas(org,comando.referenciaId());
+                var reservas=repository.reservas(org,comando.referenciaId(),comando.itemId());
                 if(reservas.isEmpty()) throw erro("RESERVA_INEXISTENTE","Reserva ativa nao encontrada");
                 for(var r:reservas) {
                     var p=posicoes.stream().filter(v->v.id().equals(r.posicaoId())).findFirst().orElseThrow(()->erro("RESERVA_INVALIDA","Reserva de outro item"));
@@ -96,7 +96,7 @@ public class MotorEstoque {
                         retirar(org,novo,r.quantidade(),alteradas,linhas);
                     } else salvar(novo,alteradas);
                 }
-                repository.concluirReserva(org,comando.referenciaId(),tipo.equals("ENTREGA")?"CONSUMIDA":"LIBERADA");
+                repository.concluirReserva(org,comando.referenciaId(),comando.itemId(),tipo.equals("ENTREGA")?"CONSUMIDA":"LIBERADA");
             }
             case "ESTORNO" -> {
                 if(comando.referenciaId()==null) throw new IllegalArgumentException("Referencia obrigatoria");

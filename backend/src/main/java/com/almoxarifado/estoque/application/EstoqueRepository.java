@@ -15,9 +15,9 @@ public interface EstoqueRepository {
  void operacao(UUID org,UUID operacao,ComandoEstoque comando,String usuario,List<Linha> linhas);
  List<Linha> linhas(UUID org,UUID operacao);
  List<Map<String,Object>> historico(UUID org,UUID item,int limite,int deslocamento,Set<UUID> escopo);
- List<Reserva> reservas(UUID org,UUID requisicao);
+ List<Reserva> reservas(UUID org,UUID requisicao,UUID item);
  void reservar(UUID org,UUID requisicao,UUID posicao,BigDecimal quantidade);
- void concluirReserva(UUID org,UUID requisicao,String status);
+ void concluirReserva(UUID org,UUID requisicao,UUID item,String status);
  BigDecimal custo(UUID org,UUID item,UUID almoxarifado);
  BigDecimal ajustarCusto(UUID org,UUID item,UUID almoxarifado,BigDecimal delta,BigDecimal valorEntrada);
  void marcarEstorno(UUID org,UUID original,UUID estorno);

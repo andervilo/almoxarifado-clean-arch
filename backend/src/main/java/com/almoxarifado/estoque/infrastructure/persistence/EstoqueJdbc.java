@@ -61,13 +61,22 @@ public class EstoqueJdbc implements EstoqueRepository {
    ORDER BY o.criado_em DESC,o.id LIMIT ? OFFSET ?
    """,org,item,ids,ids,limite,deslocamento);
  }
- public List<Reserva> reservas(UUID org,UUID req) {
-  return jdbc.query("SELECT * FROM estoque.reservas WHERE organizacao_id=? AND requisicao_id=? AND status='ATIVA' ORDER BY posicao_id",(rs,n)->new Reserva(rs.getObject("posicao_id",UUID.class),rs.getBigDecimal("quantidade")),org,req);
+ public List<Reserva> reservas(UUID org,UUID req,UUID item) {
+  return jdbc.query("""
+   SELECT r.posicao_id,r.quantidade FROM estoque.reservas r JOIN estoque.posicoes p ON p.organizacao_id=r.organizacao_id AND p.id=r.posicao_id
+   WHERE r.organizacao_id=? AND r.requisicao_id=? AND p.item_id=? AND r.status='ATIVA'
+   ORDER BY p.validade ASC NULLS LAST,p.recebido_em,p.id
+   """,(rs,n)->new Reserva(rs.getObject("posicao_id",UUID.class),rs.getBigDecimal("quantidade")),org,req,item);
  }
  public void reservar(UUID org,UUID req,UUID pos,BigDecimal quantidade) {
   jdbc.update("INSERT INTO estoque.reservas(organizacao_id,requisicao_id,posicao_id,quantidade,status) VALUES(?,?,?,?,'ATIVA')",org,req,pos,quantidade);
  }
- public void concluirReserva(UUID org,UUID req,String status) { jdbc.update("UPDATE estoque.reservas SET status=? WHERE organizacao_id=? AND requisicao_id=? AND status='ATIVA'",status,org,req); }
+ public void concluirReserva(UUID org,UUID req,UUID item,String status) {
+  jdbc.update("""
+   UPDATE estoque.reservas r SET status=? WHERE r.organizacao_id=? AND r.requisicao_id=? AND r.status='ATIVA'
+   AND EXISTS(SELECT 1 FROM estoque.posicoes p WHERE p.organizacao_id=r.organizacao_id AND p.id=r.posicao_id AND p.item_id=?)
+   """,status,org,req,item);
+ }
  public BigDecimal custo(UUID org,UUID item,UUID almox) {
   return jdbc.query("SELECT custo FROM estoque.custos WHERE organizacao_id=? AND item_id=? AND almoxarifado_id=?",(rs,n)->rs.getBigDecimal(1),org,item,almox).stream().findFirst().orElse(BigDecimal.ZERO);
  }

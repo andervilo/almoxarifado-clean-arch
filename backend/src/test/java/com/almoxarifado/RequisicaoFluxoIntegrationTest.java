@@ -10,6 +10,18 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 class RequisicaoFluxoIntegrationTest extends SuporteOperacional {
+ @Test void entregaTodosOsItensSemMisturarSuasReservas() throws Exception {
+  var c=cenario("NENHUM");
+  var dados=(com.fasterxml.jackson.databind.node.ObjectNode)json.readTree(mvc.perform(get("/api/v1/catalogo/itens/"+c.item()).with(usuario(c.org()))).andReturn().getResponse().getContentAsString());
+  dados.put("codigo","SEGUNDO");var segundo=criar(c.org(),"/catalogo/itens",dados);
+  await().atMost(Duration.ofSeconds(10)).untilAsserted(()->assertThat(jdbc.queryForObject("SELECT count(*) FROM estoque.itens_projecao WHERE organizacao_id=?",Integer.class,c.org())).isEqualTo(2));
+  assertThat(movimento(c,"entradas",UUID.randomUUID(),comando(c,10))).isEqualTo(201);
+  var entrada=comando(c,10);entrada.put("itemId",segundo);assertThat(movimento(c,"entradas",UUID.randomUUID(),entrada)).isEqualTo(201);
+  var req=criar(c.org(),"/requisicoes",Map.of("localId",c.origem(),"linhas",List.of(Map.of("itemId",c.item(),"quantidade",4),Map.of("itemId",segundo,"quantidade",2))));
+  acao(c,req,"enviar");aguardar(c,req,"RESERVADA");acao(c,req,"separar");acao(c,req,"entregar");aguardar(c,req,"ENTREGUE");
+  assertThat(jdbc.queryForObject("SELECT sum(quantidade) FROM estoque.posicoes WHERE organizacao_id=?",BigDecimal.class,c.org())).isEqualByComparingTo("14");
+  assertThat(jdbc.queryForObject("SELECT sum(reservado) FROM estoque.posicoes WHERE organizacao_id=?",BigDecimal.class,c.org())).isZero();
+ }
  @Test void editaSomenteAntesDaReserva() throws Exception {
   var c=cenario("NENHUM");assertThat(movimento(c,"entradas",UUID.randomUUID(),comando(c,10))).isEqualTo(201);
   var body=Map.of("localId",c.origem(),"linhas",List.of(Map.of("itemId",c.item(),"quantidade",4)));
