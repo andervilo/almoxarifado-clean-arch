@@ -29,16 +29,24 @@ public class RequisicaoService {
  }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE','REQUISITANTE')")
  public Requisicao criar(UUID local,List<Requisicao.Linha> linhas) {
+  return criar(local,linhas,null);
+ }
+ @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE','REQUISITANTE')")
+ public Requisicao criar(UUID local,List<Requisicao.Linha> linhas,String setorCodigo) {
   exigirLocal(local);
-  var r=new Requisicao(UUID.randomUUID(),contexto.organizacaoId(),contexto.usuarioId(),local,linhas,"RASCUNHO",null,null);
+  var r=comSetor(new Requisicao(UUID.randomUUID(),contexto.organizacaoId(),contexto.usuarioId(),local,linhas,"RASCUNHO",null,null),setorCodigo);
   repository.criar(r);auditoria.registrar(r.organizacaoId(),contexto.usuarioId(),"REQUISICAO_CRIADA",r.id().toString());return r;
  }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE','REQUISITANTE')")
  public Requisicao editar(UUID id,UUID local,List<Requisicao.Linha> linhas) {
+  return editar(id,local,linhas,null);
+ }
+ @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE','REQUISITANTE')")
+ public Requisicao editar(UUID id,UUID local,List<Requisicao.Linha> linhas,String setorCodigo) {
   exigirLocal(local);
   var r=buscar(id,true);
   r.transicionar(r.status(),null,null,"RASCUNHO","FALHA_RESERVA");
-  var novo=new Requisicao(id,r.organizacaoId(),r.solicitanteId(),local,linhas,r.status(),null,null);
+  var novo=comSetor(new Requisicao(id,r.organizacaoId(),r.solicitanteId(),local,linhas,r.status(),null,null),setorCodigo);
   repository.editar(novo);auditoria.registrar(r.organizacaoId(),contexto.usuarioId(),"REQUISICAO_EDITADA",id.toString());return novo;
  }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE','REQUISITANTE')")
@@ -95,6 +103,31 @@ public class RequisicaoService {
   if(contexto.almoxarifadosPermitidos()!=null) contexto.exigirAlmoxarifado(repository.almoxarifadoDoLocal(contexto.organizacaoId(),local));
  }
  public List<RequisicaoRepository.Alocacao> alocacoes(UUID id) {buscar(id);return repository.alocacoes(contexto.organizacaoId(),id);}
+ private Requisicao comSetor(Requisicao r,String codigo) {
+  var setor=codigo==null || codigo.isBlank()?null:repository.setor(r.organizacaoId(),codigo).orElseThrow(()->new RecursoNaoEncontradoException("Setor nao cadastrado nesta organizacao ou ainda nao sincronizado"));
+  return new Requisicao(r.id(),r.organizacaoId(),r.solicitanteId(),r.localId(),r.linhas(),r.status(),r.comandoId(),r.erro(),r.estadoAnterior(),setor==null?null:setor.codigo(),setor==null?"":setor.centroCusto());
+ }
+ private void periodo(java.time.LocalDate inicio,java.time.LocalDate fim) {
+  if(inicio==null || fim==null || fim.isBefore(inicio) || java.time.temporal.ChronoUnit.DAYS.between(inicio,fim)>366 || fim.equals(java.time.LocalDate.MAX)) throw new IllegalArgumentException("Periodo invalido ou superior a 366 dias");
+ }
+ @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE','GESTOR')")
+ public List<Map<String,Object>> consumo(java.time.LocalDate inicio,java.time.LocalDate fim,int pagina,int tamanho) {
+  periodo(inicio,fim);if(pagina<0 || pagina>1000000 || tamanho<1 || tamanho>100) throw new IllegalArgumentException("Paginacao invalida");
+  return repository.consumo(contexto.organizacaoId(),inicio,fim,contexto.almoxarifadosPermitidos(),tamanho,pagina*tamanho);
+ }
+ @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE','GESTOR')")
+ public String exportarConsumo(java.time.LocalDate inicio,java.time.LocalDate fim) {
+  periodo(inicio,fim);var org=contexto.organizacaoId();var linhas=repository.consumo(org,inicio,fim,contexto.almoxarifadosPermitidos(),10001,0);
+  if(linhas.size()>10000) throw new com.almoxarifado.shared.domain.RegraNegocioException("LIMITE_EXPORTACAO","Reduza o periodo para exportar ate 10000 linhas");
+  var csv=new StringBuilder("\ufeffsetor_codigo,centro_custo,item_id,quantidade,custo_total\r\n");
+  for(var linha:linhas) csv.append(java.util.stream.Stream.of("setor_codigo","centro_custo","item_id","quantidade","custo_total").map(k->csv(linha.get(k))).collect(java.util.stream.Collectors.joining(","))).append("\r\n");
+  auditoria.registrar(org,contexto.usuarioId(),"CONSUMO_EXPORTADO",inicio+":"+fim+":"+linhas.size());return csv.toString();
+ }
+ private String csv(Object valor) {
+  String texto=valor==null?"":valor.toString();
+  if(valor instanceof String && texto.stripLeading().matches("(?s)^[=+@-].*")) texto="'"+texto;
+  return "\""+texto.replace("\"","\"\"")+"\"";
+ }
  @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
  public Requisicao realocar(UUID id,UUID item,List<com.almoxarifado.requisicao.domain.AlocacaoReserva> alocacoes,String motivo,UUID chave) {
   if(chave==null || motivo==null || motivo.isBlank() || alocacoes==null || alocacoes.isEmpty() || alocacoes.size()>100) throw new IllegalArgumentException("Chave, motivo e alocacoes obrigatorios");

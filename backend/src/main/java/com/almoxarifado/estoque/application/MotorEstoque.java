@@ -121,7 +121,20 @@ public class MotorEstoque {
             default -> throw new IllegalArgumentException("Tipo invalido");
         }
         repository.operacao(org,operacao,comando,usuario,linhas);
-        if(tipo.equals("ESTORNO")) repository.marcarEstorno(org,comando.referenciaId(),operacao);
+        if(tipo.equals("ENTREGA")) {
+            var quantidade=linhas.stream().map(l->l.quantidade().negate()).reduce(BigDecimal.ZERO,BigDecimal::add);
+            var valor=linhas.stream().map(l->l.quantidade().negate().multiply(l.custo())).reduce(BigDecimal.ZERO,BigDecimal::add);
+            var data=repository.registrarEntrega(org,operacao,comando.referenciaId(),comando.itemId(),quantidade,valor);
+            eventos.publicar(new com.almoxarifado.requisicao.events.EntregaRequisicaoRegistrada(UUID.randomUUID(),Instant.now(),org,1,comando.referenciaId(),comando.itemId(),operacao,quantidade,valor,data));
+        }
+        if(tipo.equals("ESTORNO")) {
+            repository.marcarEstorno(org,comando.referenciaId(),operacao);
+            var original=repository.consumoDaOperacao(org,comando.referenciaId());
+            if(original.isPresent()) {
+                var c=original.get();var data=repository.registrarEntrega(org,operacao,c.requisicaoId(),c.itemId(),c.quantidade().negate(),c.custoTotal().negate());
+                eventos.publicar(new com.almoxarifado.requisicao.events.EntregaRequisicaoRegistrada(UUID.randomUUID(),Instant.now(),org,2,c.requisicaoId(),c.itemId(),operacao,c.quantidade().negate(),c.custoTotal().negate(),data));
+            }
+        }
         auditoria.registrar(org,usuario,"ESTOQUE_"+tipo,operacao.toString());
         if(Set.of("RESERVA","LIBERACAO","ENTREGA").contains(tipo)) {
             long revisao=repository.avancarRevisaoReserva(org,comando.referenciaId(),comando.itemId());

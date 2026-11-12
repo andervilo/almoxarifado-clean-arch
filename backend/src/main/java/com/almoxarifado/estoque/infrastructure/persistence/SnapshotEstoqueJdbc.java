@@ -11,6 +11,10 @@ public class SnapshotEstoqueJdbc implements SnapshotRepository {
  private final JdbcTemplate jdbc;private final EstoqueRepository estoque;
  public SnapshotEstoqueJdbc(JdbcTemplate jdbc,EstoqueRepository estoque) { this.jdbc=jdbc;this.estoque=estoque; }
  public List<SnapshotEventos> carregar(UUID org,String recurso,UUID apos,int tamanho) {
+  if(recurso.equals("entregas")) return jdbc.query("SELECT * FROM estoque.entregas_requisicao WHERE organizacao_id=? AND (?::uuid IS NULL OR operacao_id>?) ORDER BY operacao_id LIMIT ?",(rs,n)->{
+   var id=rs.getObject("operacao_id",UUID.class);
+   return new SnapshotEventos(id,List.of(new com.almoxarifado.requisicao.events.EntregaRequisicaoRegistrada(UUID.randomUUID(),Instant.now(),org,1,rs.getObject("requisicao_id",UUID.class),rs.getObject("item_id",UUID.class),id,rs.getBigDecimal("quantidade"),rs.getBigDecimal("custo_total"),rs.getTimestamp("efetivado_em").toInstant())));
+  },org,apos,apos,tamanho);
   if(recurso.equals("reservas")) return reservas(org,apos,tamanho);
   if(!recurso.equals("saldos")) throw new IllegalArgumentException("Recurso invalido");
   var lote=jdbc.queryForList("SELECT id,item_id FROM estoque.posicoes WHERE organizacao_id=? AND (?::uuid IS NULL OR id>?) ORDER BY id LIMIT ?",org,apos,apos,tamanho);

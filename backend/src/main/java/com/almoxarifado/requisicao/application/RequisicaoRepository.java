@@ -18,4 +18,7 @@ public interface RequisicaoRepository {
  List<Alocacao> alocacoes(UUID org,UUID requisicao);
  Optional<ChaveEntrega> chaveRealocacao(UUID org,UUID chave);
  void registrarChaveRealocacao(UUID org,UUID chave,UUID requisicao,String assinatura,UUID comando);
+ record SetorReferencia(String codigo,String nome,String centroCusto) {}
+ Optional<SetorReferencia> setor(UUID org,String codigo);
+ List<Map<String,Object>> consumo(UUID org,java.time.LocalDate inicio,java.time.LocalDate fim,Set<UUID> escopo,int limite,int deslocamento);
 }

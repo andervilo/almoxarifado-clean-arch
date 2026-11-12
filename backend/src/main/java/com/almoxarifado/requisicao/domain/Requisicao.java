@@ -3,7 +3,10 @@ import java.util.*;
 import java.math.BigDecimal;
 import com.almoxarifado.shared.domain.RegraNegocioException;
 public record Requisicao(UUID id,UUID organizacaoId,String solicitanteId,UUID localId,List<Linha> linhas,
- String status,UUID comandoId,String erro,String estadoAnterior) {
+ String status,UUID comandoId,String erro,String estadoAnterior,String setorCodigo,String centroCusto) {
+ public Requisicao(UUID id,UUID org,String solicitante,UUID local,List<Linha> linhas,String status,UUID comando,String erro,String anterior) {
+  this(id,org,solicitante,local,linhas,status,comando,erro,anterior,null,"");
+ }
  public Requisicao(UUID id,UUID org,String solicitante,UUID local,List<Linha> linhas,String status,UUID comando,String erro) {
   this(id,org,solicitante,local,linhas,status,comando,erro,null);
  }
@@ -29,7 +32,7 @@ public record Requisicao(UUID id,UUID organizacaoId,String solicitanteId,UUID lo
  }
  public Requisicao transicionar(String destino,UUID comando,String falha,String... permitidos) {
   exigirEstado(permitidos);
-  return new Requisicao(id,organizacaoId,solicitanteId,localId,linhas,destino,comando,falha,comando==null?null:status);
+  return new Requisicao(id,organizacaoId,solicitanteId,localId,linhas,destino,comando,falha,comando==null?null:status,setorCodigo,centroCusto);
  }
  public void exigirEstado(String... permitidos) {
   if(!Set.of(permitidos).contains(status)) throw new RegraNegocioException("TRANSICAO_INVALIDA","Estado atual: "+status);

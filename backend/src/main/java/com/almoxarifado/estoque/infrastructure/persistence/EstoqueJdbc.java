@@ -100,6 +100,14 @@ public class EstoqueJdbc implements EstoqueRepository {
    ON CONFLICT(organizacao_id,requisicao_id,item_id) DO UPDATE SET revisao=estoque.revisoes_reserva.revisao+1 RETURNING revisao
    """,Long.class,org,UUID.randomUUID(),req,item);
  }
+ public java.time.Instant registrarEntrega(UUID org,UUID operacao,UUID req,UUID item,BigDecimal quantidade,BigDecimal custoTotal) {
+  var data=jdbc.queryForObject("SELECT criado_em FROM estoque.operacoes WHERE organizacao_id=? AND id=?",java.sql.Timestamp.class,org,operacao);
+  jdbc.update("INSERT INTO estoque.entregas_requisicao(organizacao_id,operacao_id,requisicao_id,item_id,quantidade,custo_total,efetivado_em) VALUES(?,?,?,?,?,?,?)",org,operacao,req,item,quantidade,custoTotal,data);
+  return data.toInstant();
+ }
+ public Optional<ConsumoVinculado> consumoDaOperacao(UUID org,UUID operacao) {
+  return jdbc.query("SELECT * FROM estoque.entregas_requisicao WHERE organizacao_id=? AND operacao_id=?",(rs,n)->new ConsumoVinculado(rs.getObject("requisicao_id",UUID.class),rs.getObject("item_id",UUID.class),rs.getBigDecimal("quantidade"),rs.getBigDecimal("custo_total")),org,operacao).stream().findFirst();
+ }
  public BigDecimal custo(UUID org,UUID item,UUID almox) {
   return jdbc.query("SELECT custo FROM estoque.custos WHERE organizacao_id=? AND item_id=? AND almoxarifado_id=?",(rs,n)->rs.getBigDecimal(1),org,item,almox).stream().findFirst().orElse(BigDecimal.ZERO);
  }

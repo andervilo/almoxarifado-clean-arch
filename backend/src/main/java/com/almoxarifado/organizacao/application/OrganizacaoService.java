@@ -57,9 +57,14 @@ public class OrganizacaoService {
     public List<Setor> setores() { return repository.setores(organizacaoAtiva()); }
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO')")
-    public void salvarSetor(String codigo, String nome) {
+    public void salvarSetor(String codigo, String nome) { salvarSetor(codigo,nome,""); }
+    @Transactional
+    @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO')")
+    public void salvarSetor(String codigo, String nome, String centroCusto) {
         var org=organizacaoAtiva();
-        repository.salvarSetor(org,new Setor(codigo,nome));
+        var setor=new Setor(codigo,nome,centroCusto);
+        repository.salvarSetor(org,setor);
+        eventos.publicar(new com.almoxarifado.organizacao.events.SetorAlterado(UUID.randomUUID(),Instant.now(),org,1,codigo,nome,setor.getCentroCusto()));
         auditoria.registrar(org,contexto.usuarioId(),"SETOR_SALVO",codigo);
     }
     @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO')")

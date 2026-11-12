@@ -21,8 +21,8 @@ public class OrganizacaoController {
     public ConfiguracaoResponse configuracao() { return new ConfiguracaoResponse(service.configuracao().diasAlertaValidade()); }
     @PutMapping("/organizacao/configuracoes")
     public void configurar(@Valid @RequestBody ConfiguracaoRequest req) { service.configurar(req.diasAlertaValidade()); }
-    public record SetorRequest(@NotBlank @Size(max=120) String codigo,@NotBlank @Size(max=255) String nome) {}
-    public record SetorResponse(String codigo,String nome) {}
+    public record SetorRequest(@NotBlank @Size(max=120) String codigo,@NotBlank @Size(max=255) String nome,@Size(max=120) String centroCusto) {}
+    public record SetorResponse(String codigo,String nome,String centroCusto) {}
     public record UsuarioRequest(@NotBlank @Size(max=255) String codigo,@NotBlank @Size(max=255) String nome,
         @NotBlank @Email @Size(max=255) String email,@NotNull PerfilUsuario perfil,boolean ativo) {}
     public record UsuarioResponse(String codigo,String nome,String email,PerfilUsuario perfil,boolean ativo) {}
@@ -38,9 +38,9 @@ public class OrganizacaoController {
     @PutMapping("/organizacao")
     public void atualizar(@Valid @RequestBody AtualizarOrganizacao req) { service.atualizar(req.nome(),req.codigo(),req.ativa()); }
     @GetMapping("/setores")
-    public List<SetorResponse> setores() { return service.setores().stream().map(s->new SetorResponse(s.getCodigo(),s.getNome())).toList(); }
+    public List<SetorResponse> setores() { return service.setores().stream().map(s->new SetorResponse(s.getCodigo(),s.getNome(),s.getCentroCusto())).toList(); }
     @PutMapping("/setores")
-    public void setor(@Valid @RequestBody SetorRequest req) { service.salvarSetor(req.codigo(),req.nome()); }
+    public void setor(@Valid @RequestBody SetorRequest req) { service.salvarSetor(req.codigo(),req.nome(),req.centroCusto()); }
     @GetMapping("/usuarios")
     public List<UsuarioResponse> usuarios() { return service.usuarios().stream().map(u->new UsuarioResponse(u.getCodigo(),u.getNome(),u.getEmail(),u.getPerfil(),u.isAtivo())).toList(); }
     @PutMapping("/usuarios")

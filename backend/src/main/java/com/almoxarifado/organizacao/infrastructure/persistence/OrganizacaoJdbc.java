@@ -31,13 +31,13 @@ public class OrganizacaoJdbc implements OrganizacaoRepository {
     }
     public List<Setor> setores(UUID org) {
         return jdbc.query("SELECT * FROM organizacao.setores WHERE organizacao_id=? ORDER BY codigo",
-            (rs,n)->new Setor(rs.getString("codigo"),rs.getString("nome")), org);
+            (rs,n)->new Setor(rs.getString("codigo"),rs.getString("nome"),rs.getString("centro_custo")), org);
     }
     public void salvarSetor(UUID org, Setor setor) {
         jdbc.update("""
-            INSERT INTO organizacao.setores (organizacao_id,codigo,nome) VALUES (?,?,?)
-            ON CONFLICT (organizacao_id,codigo) DO UPDATE SET nome=excluded.nome
-            """, org,setor.getCodigo(),setor.getNome());
+            INSERT INTO organizacao.setores (organizacao_id,codigo,nome,centro_custo,snapshot_id) VALUES (?,?,?,?,?)
+            ON CONFLICT (organizacao_id,codigo) DO UPDATE SET nome=excluded.nome,centro_custo=excluded.centro_custo
+            """, org,setor.getCodigo(),setor.getNome(),setor.getCentroCusto(),UUID.randomUUID());
     }
     public List<Usuario> usuarios(UUID org) {
         return jdbc.query("SELECT * FROM organizacao.usuarios WHERE organizacao_id=? ORDER BY codigo", (rs,n)->{
