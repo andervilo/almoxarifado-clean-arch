@@ -1,2 +1,2 @@
-@org.springframework.modulith.ApplicationModule(allowedDependencies={"shared","organizacao::events"})
+@org.springframework.modulith.ApplicationModule(allowedDependencies={"estrutura::events","shared","organizacao::events"})
 package com.almoxarifado.catalogo;

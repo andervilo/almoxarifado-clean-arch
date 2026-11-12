@@ -11,9 +11,9 @@ public class AlertaController {
  private final AlertaService service;
  public AlertaController(AlertaService service) { this.service=service; }
  public record DispensaRequest(@NotBlank @Size(max=150) String chave,@NotBlank @Size(max=100) String revisao) {}
- public record AlertaResponse(String chave,String tipo,UUID itemId,UUID posicaoId,BigDecimal quantidade,BigDecimal limite,LocalDate validade,String revisao) {}
+ public record AlertaResponse(String chave,String tipo,UUID itemId,UUID posicaoId,BigDecimal quantidade,BigDecimal limite,LocalDate validade,String revisao,UUID almoxarifadoId) {}
  @GetMapping("/alertas") public List<AlertaResponse> listar(@RequestParam(defaultValue="0") int pagina,@RequestParam(defaultValue="20") int tamanho) {
-  return service.listar(pagina,tamanho).stream().map(a->new AlertaResponse(a.chave(),a.tipo(),a.itemId(),a.posicaoId(),a.quantidade(),a.limite(),a.validade(),a.revisao())).toList();
+  return service.listar(pagina,tamanho).stream().map(a->new AlertaResponse(a.chave(),a.tipo(),a.itemId(),a.posicaoId(),a.quantidade(),a.limite(),a.validade(),a.revisao(),a.almoxarifadoId())).toList();
  }
  @PostMapping("/alertas/dispensar") public void dispensar(@Valid @RequestBody DispensaRequest req) { service.dispensar(req.chave(),req.revisao()); }
  @GetMapping("/dashboard") public Map<String,Object> dashboard() { return service.dashboard(); }

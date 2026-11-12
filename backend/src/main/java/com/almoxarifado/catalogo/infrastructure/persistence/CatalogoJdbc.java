@@ -52,4 +52,18 @@ public class CatalogoJdbc implements CatalogoRepository {
  public void salvar(Item v) {
   jdbc.update("INSERT INTO catalogo.itens (id,organizacao_id,codigo,descricao,categoria_id,unidade_medida_id,rastreabilidade,estoque_minimo,estoque_maximo,ativo) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (organizacao_id,id) DO UPDATE SET codigo=excluded.codigo,descricao=excluded.descricao,categoria_id=excluded.categoria_id,unidade_medida_id=excluded.unidade_medida_id,rastreabilidade=excluded.rastreabilidade,estoque_minimo=excluded.estoque_minimo,estoque_maximo=excluded.estoque_maximo,ativo=excluded.ativo",v.id(),v.organizacaoId(),v.codigo(),v.descricao(),v.categoriaId(),v.unidadeMedidaId(),v.rastreabilidade().name(),v.estoqueMinimo(),v.estoqueMaximo(),v.ativo());
  }
+
+ public boolean almoxarifadoAtivo(UUID org,UUID id) {
+  return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM catalogo.almoxarifados_projecao WHERE organizacao_id=? AND id=? AND ativo)",Boolean.class,org,id));
+ }
+ public Optional<ParametrosReposicao> parametros(UUID org,UUID item,UUID almox) {
+  return jdbc.query("SELECT * FROM catalogo.parametros_reposicao WHERE organizacao_id=? AND item_id=? AND almoxarifado_id=?",(rs,n)->new ParametrosReposicao(rs.getObject("id",UUID.class),item,almox,rs.getBigDecimal("minimo"),rs.getBigDecimal("maximo")),org,item,almox).stream().findFirst();
+ }
+ public ParametrosReposicao salvarParametros(UUID org,ParametrosReposicao p) {
+  var id=jdbc.queryForObject("""
+   INSERT INTO catalogo.parametros_reposicao(organizacao_id,id,item_id,almoxarifado_id,minimo,maximo) VALUES(?,?,?,?,?,?)
+   ON CONFLICT(organizacao_id,item_id,almoxarifado_id) DO UPDATE SET minimo=excluded.minimo,maximo=excluded.maximo RETURNING id
+   """,UUID.class,org,p.id(),p.itemId(),p.almoxarifadoId(),p.minimo(),p.maximo());
+  return new ParametrosReposicao(id,p.itemId(),p.almoxarifadoId(),p.minimo(),p.maximo());
+ }
 }

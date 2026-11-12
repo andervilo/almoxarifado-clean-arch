@@ -82,4 +82,17 @@ public class CatalogoService {
   return dados;
  }
  public UUID organizacaoId() { return tenant(); }
+
+ public ParametrosReposicao parametros(UUID item,UUID almox) {
+  contexto.exigirAlmoxarifado(almox);buscarItem(item);
+  return repository.parametros(tenant(),item,almox).orElseThrow(()->new RecursoNaoEncontradoException("Parametros nao configurados"));
+ }
+ @Transactional @PreAuthorize("hasAnyRole('ADMIN_PLATAFORMA','ADMIN_ORGANIZACAO','ALMOXARIFE')")
+ public ParametrosReposicao configurarReposicao(UUID item,UUID almox,java.math.BigDecimal minimo,java.math.BigDecimal maximo) {
+  contexto.exigirAlmoxarifado(almox);buscarItem(item);var org=tenant();
+  if(!repository.almoxarifadoAtivo(org,almox)) throw new RegraNegocioException("ALMOXARIFADO_INDISPONIVEL","Almoxarifado inativo, inexistente ou nao sincronizado");
+  var novo=repository.salvarParametros(org,new ParametrosReposicao(UUID.randomUUID(),item,almox,minimo,maximo));
+  auditoria.registrar(org,contexto.usuarioId(),"PARAMETROS_REPOSICAO_SALVOS",item+":"+almox);
+  eventos.publicar(new com.almoxarifado.catalogo.events.ParametrosReposicaoAlterados(UUID.randomUUID(),Instant.now(),org,1,item,almox,minimo,maximo));return novo;
+ }
 }

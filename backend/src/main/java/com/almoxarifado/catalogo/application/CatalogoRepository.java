@@ -15,4 +15,7 @@ public interface CatalogoRepository {
  Optional<Item> buscarItem(UUID org,UUID id);
  List<Item> listarItem(UUID org,int limite,int deslocamento);
  void salvar(Item valor);
+ boolean almoxarifadoAtivo(UUID org,UUID id);
+ Optional<ParametrosReposicao> parametros(UUID org,UUID item,UUID almoxarifado);
+ ParametrosReposicao salvarParametros(UUID org,ParametrosReposicao parametros);
 }

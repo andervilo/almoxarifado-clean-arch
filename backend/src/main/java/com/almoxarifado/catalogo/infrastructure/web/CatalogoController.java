@@ -76,4 +76,15 @@ public class CatalogoController {
  public ItemResponse atualizarItem(@PathVariable UUID id,@Valid @RequestBody ItemRequest req) {
   return resposta(service.salvarItem(id,true,new Item(id,service.organizacaoId(),req.codigo(),req.descricao(),req.categoriaId(),req.unidadeMedidaId(),req.rastreabilidade(),req.estoqueMinimo(),req.estoqueMaximo(),req.ativo())));
  }
+
+ public record ParametrosRequest(@NotNull @Digits(integer=15,fraction=4) BigDecimal minimo,@NotNull @Digits(integer=15,fraction=4) BigDecimal maximo) {}
+ public record ParametrosResponse(UUID itemId,UUID almoxarifadoId,BigDecimal minimo,BigDecimal maximo) {}
+ @GetMapping("/itens/{item}/parametros-reposicao/{almox}")
+ public ParametrosResponse parametros(@PathVariable UUID item,@PathVariable UUID almox) {
+  var p=service.parametros(item,almox);return new ParametrosResponse(item,almox,p.minimo(),p.maximo());
+ }
+ @PutMapping("/itens/{item}/parametros-reposicao/{almox}")
+ public ParametrosResponse configurar(@PathVariable UUID item,@PathVariable UUID almox,@Valid @RequestBody ParametrosRequest req) {
+  var p=service.configurarReposicao(item,almox,req.minimo(),req.maximo());return new ParametrosResponse(item,almox,p.minimo(),p.maximo());
+ }
 }
